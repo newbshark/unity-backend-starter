@@ -12,19 +12,7 @@ export class ServerController {
     summary: 'Проверка статуса игрового сервера (Healthcheck)',
     description: 'Возвращает состояние онлайна, аптайм в секундах и версию протокола для клиента Unity.',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Сервер работает штатно',
-    schema: {
-      example: {
-        status: 'online',
-        uptimeSeconds: 42,
-        serverTime: '2026-11-26T12:00:00.000Z',
-        protocolVersion: '1.0.0',
-        activePlayers: 1,
-      },
-    },
-  })
+  @ApiResponse({ status: 200, description: 'Сервер работает штатно' })
   getStatus() {
     this.gameState.recordPing();
     const cfg = this.gameState.getConfig();
@@ -32,7 +20,7 @@ export class ServerController {
       status: cfg.status,
       uptimeSeconds: this.gameState.getUptimeSeconds(),
       serverTime: new Date().toISOString(),
-      protocolVersion: '1.0.0',
+      protocolVersion: '2.0.0',
       activePlayers: cfg.activePlayers,
     };
   }
@@ -42,17 +30,7 @@ export class ServerController {
     summary: 'Сообщение дня (Message of the Day)',
     description: 'Возвращает заголовок, текст объявления и множитель опыта (EXP Multiplier) для отображения в игре.',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'MOTD успешно получен',
-    schema: {
-      example: {
-        title: 'Cyber Arena Server',
-        motd: 'Добро пожаловать на сервер! Сегодня двойной опыт (x2 XP)!',
-        expMultiplier: 2.0,
-      },
-    },
-  })
+  @ApiResponse({ status: 200, description: 'MOTD успешно получен' })
   getMotd() {
     this.gameState.recordPing();
     const cfg = this.gameState.getConfig();
@@ -63,10 +41,21 @@ export class ServerController {
     };
   }
 
+  @Get('world')
+  @ApiOperation({
+    summary: 'Глобальные законы мира (скорость, масштаб, гравитация, цвет)',
+    description: 'Плоский JSON для Unity JsonUtility: позволяет учителю с телефона менять размер кубов и включать лунную гравитацию.',
+  })
+  @ApiResponse({ status: 200, description: 'Параметры мира получены' })
+  getWorld() {
+    this.gameState.recordPing();
+    return this.gameState.getWorldState();
+  }
+
   @Get('config')
   @ApiOperation({
-    summary: 'Полный живой конфиг игры (для панели и будущих фич)',
-    description: 'Возвращает текущие значения с мобильной панели: множители, цвет, кастомные переменные и статистику.',
+    summary: 'Полный живой конфиг игры + статистика',
+    description: 'Возвращает текущие значения с панели учителя и статистику запросов.',
   })
   getConfig() {
     this.gameState.recordPing();
@@ -78,19 +67,20 @@ export class ServerController {
 
   @Post('config')
   @ApiOperation({
-    summary: 'Обновить параметры игры на лету',
-    description: 'Обновляет значения конфига (используется мобильной панелью управления и Swagger).',
+    summary: 'Обновить законы мира на лету',
+    description: 'Обновляет множители, масштаб куба, гравитацию и цвет (используется пультом учителя и Swagger).',
   })
   @ApiBody({
     schema: {
       example: {
         status: 'online',
         title: 'Cyber Arena Server',
-        motd: '⚡ Учитель включил режим x5 XP!',
+        motd: 'Учитель включил Лунную гравитацию и размер Титана!',
         expMultiplier: 5.0,
-        speedMultiplier: 1.5,
-        themeColor: '#C6FF00',
-        activePlayers: 5,
+        cubeScale: 2.2,
+        lowGravity: true,
+        gravityY: -1.8,
+        cubeColorHex: '#38BDF8',
       },
     },
   })

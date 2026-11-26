@@ -12,6 +12,9 @@ export class DashboardController {
     return {
       config: this.gameState.getConfig(),
       stats: this.gameState.getStats(),
+      boss: this.gameState.getBoss(),
+      leaderboard: this.gameState.getLeaderboard(),
+      events: this.gameState.getRecentEvents(),
     };
   }
 
@@ -21,229 +24,223 @@ export class DashboardController {
     const initial = JSON.stringify({
       config: this.gameState.getConfig(),
       stats: this.gameState.getStats(),
+      boss: this.gameState.getBoss(),
+      leaderboard: this.gameState.getLeaderboard(),
+      events: this.gameState.getRecentEvents(),
     });
 
     return `<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>ПУЛЬТ УЧИТЕЛЯ (UNITY)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ПУЛЬТ БОГА // UNITY + NESTJS LIVE</title>
   <style>
     :root {
-      --bg: #0f1117;
-      --card: #181b24;
-      --elev: #222634;
-      --border: #31374a;
+      --bg: #0c0e13;
+      --card: #141720;
+      --elev: #1d2130;
+      --border: rgba(255, 255, 255, 0.1);
       --volt: #c6ff00;
       --orange: #ff3b00;
       --amber: #ffd600;
       --cyan: #38bdf8;
       --green: #22c55e;
+      --red: #f43f5e;
       --text: #f4f4f5;
-      --dim: #a1a1aa;
+      --dim: #9ca3af;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      padding: 14px 14px 56px;
-      background: var(--bg);
+      padding: 14px 12px 60px;
+      background: radial-gradient(circle at 50% -10%, rgba(56, 189, 248, 0.12), transparent 50%), var(--bg);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       line-height: 1.45;
     }
-    .wrap { max-width: 560px; margin: 0 auto; }
+    .wrap { max-width: 600px; margin: 0 auto; }
     .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 10px;
       background: var(--card);
-      border: 2px solid var(--volt);
+      border: 1px solid rgba(198, 255, 0, 0.45);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
       border-radius: 10px;
-      padding: 13px 14px;
+      padding: 13px 15px;
       margin-bottom: 12px;
     }
-    .title { font-weight: 900; font-size: 16px; color: var(--volt); }
-    .sub { font-size: 11.5px; color: var(--dim); }
+    .title { font-weight: 800; font-size: 16px; color: var(--volt); letter-spacing: -0.01em; }
+    .sub { font-size: 11.5px; color: var(--dim); margin-top: 2px; }
     .pill {
-      font-family: monospace;
-      font-weight: 900;
+      font-family: var(--mono);
+      font-weight: 800;
       font-size: 11px;
       padding: 5px 9px;
       border-radius: 6px;
       background: var(--volt);
       color: #111;
       white-space: nowrap;
+      font-variant-numeric: tabular-nums;
     }
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 8px;
       margin-bottom: 12px;
     }
+    @media (max-width: 460px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
     .stat-box {
       background: var(--card);
-      border: 1.5px solid var(--border);
+      border: 1px solid var(--border);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
       border-radius: 8px;
       padding: 10px 6px;
       text-align: center;
     }
-    .stat-val { font-family: monospace; font-size: 19px; font-weight: 900; color: var(--amber); }
-    .stat-lbl { font-size: 10.5px; color: var(--dim); }
+    .stat-val { font-family: var(--mono); font-size: 18px; font-weight: 800; color: var(--amber); font-variant-numeric: tabular-nums; }
+    .stat-lbl { font-size: 10.5px; color: var(--dim); margin-top: 2px; }
 
     .card {
       background: var(--card);
-      border: 1.5px solid var(--border);
+      border: 1px solid var(--border);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
       border-radius: 10px;
       padding: 14px;
       margin-bottom: 12px;
     }
     .card-title {
-      font-size: 13px;
-      font-weight: 900;
+      font-size: 12.5px;
+      font-weight: 800;
       text-transform: uppercase;
       color: var(--cyan);
       margin-bottom: 6px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      flex-wrap: wrap;
       gap: 8px;
     }
-    .hint {
-      font-size: 12px;
-      color: var(--dim);
-      margin-bottom: 10px;
-    }
-    .tag-ok {
-      font-family: monospace;
-      font-size: 10px;
-      background: rgba(34, 197, 94, 0.16);
-      color: #4ade80;
-      border: 1px solid #22c55e;
-      padding: 2px 6px;
-      border-radius: 4px;
-    }
-    .tag-later {
-      font-family: monospace;
-      font-size: 10px;
-      background: rgba(161, 161, 170, 0.15);
-      color: #d4d4d8;
-      border: 1px solid #52525b;
-      padding: 2px 6px;
-      border-radius: 4px;
-    }
+    .hint { font-size: 12px; color: var(--dim); margin-bottom: 10px; }
 
-    /* 3 BIG SCENE BUTTONS FOR LIVE LESSON */
-    .scene-stack {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
+    .scene-stack { display: flex; flex-direction: column; gap: 8px; }
     .scene-btn {
       width: 100%;
-      border: 2px solid var(--border);
+      border: 1px solid var(--border);
       border-radius: 9px;
       background: var(--elev);
       color: var(--text);
-      padding: 13px 14px;
+      padding: 12px 13px;
       text-align: left;
       cursor: pointer;
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 10px;
+      transition: border-color 0.15s ease, transform 0.08s ease;
     }
-    .scene-btn:active { transform: scale(0.98); }
+    .scene-btn:active { transform: scale(0.99); }
     .scene-btn.active { border-color: var(--volt); box-shadow: 0 0 0 1px var(--volt); }
-    .scene-btn-title { font-weight: 800; font-size: 14.5px; display: block; }
+    .scene-btn-title { font-weight: 700; font-size: 14px; display: block; }
     .scene-btn-sub { font-size: 11.5px; color: var(--dim); display: block; margin-top: 2px; }
-    .scene-badge {
-      font-family: monospace;
-      font-weight: 900;
-      font-size: 12px;
+    .badge {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 800;
       padding: 4px 8px;
-      border-radius: 6px;
-      white-space: nowrap;
+      border-radius: 5px;
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
     }
 
-    label {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--dim);
-      margin-bottom: 5px;
-      margin-top: 11px;
-    }
-    input[type="text"], input[type="number"], textarea, select {
+    /* BOSS BAR */
+    .boss-bar-bg {
+      height: 14px;
       width: 100%;
-      background: var(--elev);
-      border: 1.5px solid var(--border);
+      background: #090b10;
+      border: 1px solid var(--border);
       border-radius: 7px;
-      color: var(--text);
-      padding: 10px 12px;
-      font-size: 15px;
-      font-family: inherit;
-      outline: none;
+      overflow: hidden;
+      margin: 8px 0;
     }
-    input:focus, textarea:focus, select:focus { border-color: var(--volt); }
-
-    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-    .btn {
-      flex: 1;
-      min-width: 80px;
-      border: none;
-      border-radius: 8px;
+    .boss-bar-fill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #ff3b00, #f59e0b);
+      transition: width 0.25s ease;
+    }
+    .row-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .mini-btn {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 7px 11px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
       background: var(--elev);
       color: var(--text);
-      padding: 12px 12px;
-      font-weight: 800;
-      font-size: 13.5px;
       cursor: pointer;
-      text-align: center;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
     }
-    .btn-volt { background: var(--volt); color: #111; }
-    .btn-orange { background: var(--orange); color: #fff; }
-    .btn-sm { padding: 8px 10px; font-size: 12px; flex: 0 1 auto; }
+    .mini-btn.volt { background: var(--volt); color: #111; border-color: var(--volt); }
+    .mini-btn.red { background: rgba(244, 63, 94, 0.16); color: #fda4af; border-color: var(--red); }
 
-    details.card summary {
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 800;
+    label.lbl {
+      display: block;
+      font-family: var(--mono);
+      font-size: 11px;
       color: var(--dim);
-      list-style: none;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      background: #0c0e13;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 9px 11px;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+    .send-btn {
+      width: 100%;
+      padding: 11px;
+      border-radius: 8px;
+      border: none;
+      background: var(--volt);
+      color: #111;
+      font-weight: 800;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .lb-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-    }
-    details.card[open] summary { margin-bottom: 10px; color: var(--text); }
-
-    .kv-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr auto;
-      gap: 6px;
-      margin-bottom: 8px;
-      align-items: center;
-    }
-    .json-preview {
-      background: #090b10;
-      color: var(--volt);
-      border: 1px solid var(--border);
+      padding: 7px 9px;
+      background: #0f1219;
+      border: 1px solid rgba(255,255,255,0.06);
       border-radius: 6px;
-      padding: 10px;
-      font-family: monospace;
-      font-size: 11.5px;
-      overflow-x: auto;
-      white-space: pre-wrap;
-      word-break: break-word;
-      margin: 8px 0 0;
+      margin-bottom: 5px;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+    .feed {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: #cbd5e1;
+      background: #090b10;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 9px;
+      max-height: 150px;
+      overflow-y: auto;
+      line-height: 1.5;
     }
     .toast {
       position: fixed;
@@ -252,13 +249,13 @@ export class DashboardController {
       transform: translateX(-50%);
       background: var(--volt);
       color: #111;
-      font-weight: 900;
-      font-size: 13px;
-      padding: 10px 18px;
+      padding: 9px 16px;
       border-radius: 8px;
+      font-weight: 800;
+      font-size: 13px;
       display: none;
       z-index: 999;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      white-space: nowrap;
     }
   </style>
 </head>
@@ -266,265 +263,243 @@ export class DashboardController {
   <div class="wrap">
     <div class="header">
       <div>
-        <div class="title">⚡ ПУЛЬТ УЧИТЕЛЯ (UNITY)</div>
-        <div class="sub">Нажми кнопку здесь &rarr; дети жмут <b>R</b> в игре</div>
+        <div class="title">ПУЛЬТ УЧИТЕЛЯ LIVE</div>
+        <div class="sub">Одно нажатие меняет игру у всего класса</div>
       </div>
-      <div class="pill" id="live-status-pill">ONLINE</div>
+      <div class="pill" id="live-pill">x2 XP</div>
     </div>
 
     <div class="stats-grid">
       <div class="stat-box">
-        <div class="stat-val" id="stat-pings">0</div>
-        <div class="stat-lbl">Запросов Unity</div>
+        <div class="stat-val" id="st-req">0</div>
+        <div class="stat-lbl">Запросов</div>
       </div>
       <div class="stat-box">
-        <div class="stat-val" id="stat-exp">x2.0</div>
-        <div class="stat-lbl">Множитель</div>
+        <div class="stat-val" id="st-exp">x2</div>
+        <div class="stat-lbl">Опыт</div>
       </div>
       <div class="stat-box">
-        <div class="stat-val" id="stat-uptime">0s</div>
-        <div class="stat-lbl">Аптайм</div>
+        <div class="stat-val" id="st-scale">1.0x</div>
+        <div class="stat-lbl">Размер</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="st-cheats" style="color:var(--red);">0</div>
+        <div class="stat-lbl">Читов поймано</div>
       </div>
     </div>
 
-    <!-- BLOCK 1: 3 MAIN BUTTONS FOR LIVE LESSON -->
+    <!-- РЕЖИМЫ МИРА (GOD MODE) -->
     <div class="card">
-      <div class="card-title">
-        <span>🎬 Быстрые режимы для Урока 1</span>
-        <span class="tag-ok">Работает сразу</span>
-      </div>
-      <div class="hint">Меняют <code>motd</code>, скорость вращения и цвет кубика у всех учеников в Unity (<code>ServerCubeBoost.cs</code> и <code>ServerBridgeExample.cs</code>).</div>
-
+      <div class="card-title">1. Режимы мира в Unity (1 клик)</div>
+      <div class="hint">Нажми — и в проектах ребят (если включён Auto-Sync или по R) изменится цвет, скорость, размер и гравитация!</div>
       <div class="scene-stack">
-        <button class="scene-btn" id="btn-scene-1" onclick="applyPreset('online', 'Сервер в штатном режиме. Обычный опыт x1.', 1)">
+        <button class="scene-btn" id="sc-normal" onclick="applyMode({ motd: 'Обычный режим x1. Куб зелёный, гравитация Земля.', expMultiplier: 1, cubeScale: 1.0, lowGravity: false, cubeColorHex: '#22C55E', status: 'online' }, 'sc-normal')">
           <div>
-            <span class="scene-btn-title">1️⃣ Обычный режим</span>
-            <span class="scene-btn-sub">Зелёный куб • медленное вращение</span>
+            <span class="scene-btn-title">Спокойная Земля (База)</span>
+            <span class="scene-btn-sub">Зелёный цвет • размер 1.0 • гравитация -9.81</span>
           </div>
-          <span class="scene-badge" style="background:#22c55e; color:#111;">x1 XP</span>
+          <span class="badge" style="background:#22c55e; color:#111;">x1</span>
         </button>
 
-        <button class="scene-btn" id="btn-scene-2" onclick="applyPreset('online', '🔥 Двойной опыт включён! Куб жёлтый!', 2)">
+        <button class="scene-btn" id="sc-x2" onclick="applyMode({ motd: 'Двойной опыт x2! Куб жёлтый и быстрее!', expMultiplier: 2, cubeScale: 1.2, lowGravity: false, cubeColorHex: '#FFD600', status: 'online' }, 'sc-x2')">
           <div>
-            <span class="scene-btn-title">2️⃣ Двойной опыт (Старт урока)</span>
-            <span class="scene-btn-sub">Жёлтый куб • скорость x2</span>
+            <span class="scene-btn-title">Двойной опыт</span>
+            <span class="scene-btn-sub">Жёлтый цвет • крутится 2x • чуть крупнее</span>
           </div>
-          <span class="scene-badge" style="background:#ffd600; color:#111;">x2 XP</span>
+          <span class="badge" style="background:#ffd600; color:#111;">x2</span>
         </button>
 
-        <button class="scene-btn" id="btn-scene-5" onclick="applyPreset('event', '⚡ МЕГА-ИВЕНТ! Красный турбо-режим x5!', 5)">
+        <button class="scene-btn" id="sc-x5" onclick="applyMode({ motd: 'МЕГА-ИВЕНТ x5! Красный турбо-режим!', expMultiplier: 5, cubeScale: 1.4, lowGravity: false, cubeColorHex: '#FF3B00', status: 'event' }, 'sc-x5')">
           <div>
-            <span class="scene-btn-title">3️⃣ ВАУ-ЭФФЕКТ! Мега-буст x5</span>
-            <span class="scene-btn-sub">Красный куб • турбо-вращение x5!</span>
+            <span class="scene-btn-title">Мега-буст Турбо</span>
+            <span class="scene-btn-sub">Красный цвет • крутится в 5 раз быстрее</span>
           </div>
-          <span class="scene-badge" style="background:#ff3b00; color:#fff;">x5 XP</span>
+          <span class="badge" style="background:#ff3b00; color:#fff;">x5</span>
+        </button>
+
+        <button class="scene-btn" id="sc-moon" onclick="applyMode({ motd: 'ЛУННАЯ НЕВЕСОМОСТЬ + ГИГАНТЫ!', expMultiplier: 2, cubeScale: 2.2, lowGravity: true, cubeColorHex: '#38BDF8', status: 'moon' }, 'sc-moon')">
+          <div>
+            <span class="scene-btn-title">Луна + Гигантский размер</span>
+            <span class="scene-btn-sub">Голубой цвет • размер 2.2x • гравитация -1.8</span>
+          </div>
+          <span class="badge" style="background:#38bdf8; color:#111;">MOON</span>
+        </button>
+
+        <button class="scene-btn" id="sc-tiny" onclick="applyMode({ motd: 'МИКРО-РЕЖИМ! Кубики сжались!', expMultiplier: 4, cubeScale: 0.45, lowGravity: false, cubeColorHex: '#A855F7', status: 'tiny' }, 'sc-tiny')">
+          <div>
+            <span class="scene-btn-title">Фиолетовый Микро-куб</span>
+            <span class="scene-btn-sub">Размер 0.45x • крутится 4x</span>
+          </div>
+          <span class="badge" style="background:#a855f7; color:#fff;">MINI</span>
         </button>
       </div>
     </div>
 
-    <!-- BLOCK 2: EXACT FIELDS CONNECTED IN LESSON 1 -->
+    <!-- ОБЩИЙ БОСС КЛАССА -->
     <div class="card">
       <div class="card-title">
-        <span>✏️ Ручная настройка (текст и числа)</span>
-        <span class="tag-ok">Урок 1 ✅</span>
+        <span>2. Общий Босс класса</span>
+        <span class="badge" style="background:#1d2130; color:#ffd600;" id="boss-wins">Побед: 0</span>
       </div>
-
-      <label><span>Статус (<code>/server/status</code>)</span></label>
-      <select id="f-status">
-        <option value="online">🟢 online</option>
-        <option value="event">🔥 event</option>
-        <option value="maintenance">🛠️ maintenance</option>
-      </select>
-
-      <label><span>Заголовок игры (<code>title</code>)</span></label>
-      <input type="text" id="f-title" placeholder="Cyber Arena Server" />
-
-      <label><span>Сообщение дня на экране у детей (<code>motd</code>)</span></label>
-      <textarea id="f-motd" rows="2"></textarea>
-
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-        <div>
-          <label><span>Множитель (<code>expMultiplier</code>)</span></label>
-          <input type="number" step="0.5" min="0.1" max="100" id="f-exp" />
-        </div>
-        <div>
-          <label><span>Игроков (<code>activePlayers</code>)</span></label>
-          <input type="number" min="0" max="999" id="f-players" />
-        </div>
+      <div style="display:flex; justify-content:space-between; font-family:var(--mono); font-size:12px;">
+        <b id="boss-name">Хранитель Багов</b>
+        <span id="boss-hp-text" style="color:var(--amber); font-variant-numeric:tabular-nums;">100 / 100 HP</span>
       </div>
-
-      <div class="btn-row">
-        <button class="btn btn-volt" onclick="saveConfig()">💾 Применить в облаке</button>
+      <div class="boss-bar-bg">
+        <div class="boss-bar-fill" id="boss-bar"></div>
+      </div>
+      <div style="font-size:12px; color:var(--dim);" id="boss-event">Ждём ударов из Unity (клавиша Space)...</div>
+      <div class="row-actions">
+        <button class="mini-btn volt" onclick="resetBoss()">Возродить Босса (100 HP)</button>
+        <button class="mini-btn" onclick="testBossHit()">Ударить с панели (-15 HP)</button>
       </div>
     </div>
 
-    <!-- BLOCK 3: FUTURE LESSON FIELDS (COLLAPSED BY DEFAULT) -->
-    <details class="card">
-      <summary>
-        <span>🔧 Поля для Урока 2+ (на вырост)</span>
-        <span class="tag-later">Не подключены в Уроке 1</span>
-      </summary>
-      <div class="hint">Эти поля уже отдаются в <code>/server/config</code>, но базовые скрипты Урока 1 их ещё не читают. Откроем, когда будем делать новые механики на стриме.</div>
+    <!-- ТЕКСТ НА ЭКРАНЫ -->
+    <div class="card">
+      <div class="card-title">3. Сообщение классу (в Unity MOTD)</div>
+      <label class="lbl" for="in-motd">Текст на экранах ребят</label>
+      <input type="text" id="in-motd" placeholder="Например: Саша, лови привет из облака!" />
+      <button class="send-btn" onclick="sendCustomMotd()">Отправить в Unity всем</button>
+    </div>
 
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-        <div>
-          <label><span>speedMultiplier</span></label>
-          <input type="number" step="0.1" min="0.1" max="20" id="f-speed" />
-        </div>
-        <div>
-          <label><span>themeColor</span></label>
-          <input type="text" id="f-color" />
-        </div>
+    <!-- ТАБЛИЦА ЛИДЕРОВ И ЛОГ -->
+    <div class="card">
+      <div class="card-title">
+        <span>4. Игроки, Монеты и Античит</span>
+        <button class="mini-btn red" onclick="resetPlayers()">Сбросить</button>
       </div>
+      <div id="lb-list" style="margin-bottom:10px;">
+        <div class="hint" style="margin:0;">Пока никто не собрал монеты — пусть нажмут E или Space в Unity.</div>
+      </div>
+      <label class="lbl">Живой лог сервера</label>
+      <div class="feed" id="event-feed"></div>
+    </div>
 
-      <label><span>Свои поля (<code>customData</code>)</span></label>
-      <div id="kv-list"></div>
-      <div class="btn-row">
-        <button class="btn btn-sm" onclick="addKvRow()">➕ Добавить поле</button>
-        <button class="btn btn-sm btn-volt" onclick="saveConfig()">💾 Сохранить</button>
-      </div>
-    </details>
-
-    <!-- BLOCK 4: LINKS & JSON PREVIEW -->
-    <details class="card">
-      <summary>
-        <span>🔗 Ссылки, Swagger и живой JSON</span>
-        <span class="tag-later">/api &bull; JSON</span>
-      </summary>
-      <div class="btn-row">
-        <button class="btn btn-orange" onclick="copyUrl()">📋 Копировать URL для Unity</button>
-        <a class="btn" href="/api" target="_blank">📖 Swagger (/api)</a>
-      </div>
-      <div class="btn-row">
-        <a class="btn btn-sm" href="/server/status" target="_blank">/server/status</a>
-        <a class="btn btn-sm" href="/server/motd" target="_blank">/server/motd</a>
-        <a class="btn btn-sm" href="/server/config" target="_blank">/server/config</a>
-      </div>
-      <pre class="json-preview" id="json-preview"></pre>
-    </details>
+    <div style="text-align:center; font-size:12px; color:var(--dim); margin-top:8px;">
+      <a href="/api" target="_blank" style="color:var(--cyan); font-weight:700;">Swagger API (/api)</a>
+    </div>
   </div>
 
-  <div class="toast" id="toast">✅ Обновлено! Ребята могут жать R в Unity</div>
+  <div class="toast" id="toast">Готово!</div>
 
   <script>
     const INITIAL = ${initial};
-    let customKv = Object.entries(INITIAL.config.customData || {});
 
     function showToast(msg) {
       const t = document.getElementById('toast');
+      if (!t) return;
       t.textContent = msg;
       t.style.display = 'block';
-      setTimeout(() => { t.style.display = 'none'; }, 2200);
+      setTimeout(() => { t.style.display = 'none'; }, 1800);
     }
 
-    function applyToUI(data) {
-      const c = data.config || data;
-      const s = data.stats || {};
-      document.getElementById('f-status').value = c.status || 'online';
-      document.getElementById('f-title').value = c.title || '';
-      document.getElementById('f-motd').value = c.motd || '';
-      document.getElementById('f-exp').value = c.expMultiplier ?? 2;
-      document.getElementById('f-speed').value = c.speedMultiplier ?? 1;
-      document.getElementById('f-players').value = c.activePlayers ?? 1;
-      document.getElementById('f-color').value = c.themeColor || '#FFD600';
+    function renderAll(data) {
+      if (!data) return;
+      const cfg = data.config || {};
+      const st = data.stats || {};
+      const boss = data.boss || {};
+      const lb = data.leaderboard || {};
+      const events = data.events || [];
 
-      const exp = Number(c.expMultiplier ?? 2);
-      document.getElementById('live-status-pill').textContent = (c.status || 'online').toUpperCase();
-      document.getElementById('stat-exp').textContent = 'x' + exp.toFixed(1);
-      if (s.totalRequests !== undefined) document.getElementById('stat-pings').textContent = s.totalRequests;
-      if (s.uptimeSeconds !== undefined) document.getElementById('stat-uptime').textContent = s.uptimeSeconds + 's';
+      document.getElementById('st-req').textContent = st.totalRequests ?? 0;
+      document.getElementById('st-exp').textContent = 'x' + (cfg.expMultiplier ?? 1);
+      document.getElementById('st-scale').textContent = Number(cfg.cubeScale ?? 1).toFixed(1) + 'x';
+      document.getElementById('st-cheats').textContent = st.totalCheatBlocks ?? 0;
+      document.getElementById('live-pill').textContent = 'x' + (cfg.expMultiplier ?? 1) + (cfg.lowGravity ? ' MOON' : ' XP');
 
-      document.getElementById('btn-scene-1').classList.toggle('active', exp === 1);
-      document.getElementById('btn-scene-2').classList.toggle('active', exp === 2);
-      document.getElementById('btn-scene-5').classList.toggle('active', exp >= 5);
+      const motdInput = document.getElementById('in-motd');
+      if (motdInput && document.activeElement !== motdInput) {
+        motdInput.value = cfg.motd || '';
+      }
 
-      document.getElementById('json-preview').textContent = JSON.stringify(c, null, 2);
+      // Boss
+      document.getElementById('boss-name').textContent = boss.bossName || 'Босс';
+      const hp = Number(boss.hp ?? 100);
+      const maxHp = Number(boss.maxHp ?? 100) || 100;
+      document.getElementById('boss-hp-text').textContent = hp + ' / ' + maxHp + ' HP';
+      document.getElementById('boss-wins').textContent = 'Побед: ' + (boss.defeatedCount ?? 0);
+      document.getElementById('boss-event').textContent = boss.lastEvent || '';
+      document.getElementById('boss-bar').style.width = Math.max(0, Math.min(100, Math.round((hp / maxHp) * 100))) + '%';
+
+      // Leaderboard
+      const lbList = document.getElementById('lb-list');
+      const players = lb.players || [];
+      if (players.length === 0) {
+        lbList.innerHTML = '<div class="hint" style="margin:0;">Пока пусто — пусть нажмут Space (удар), L (сундук) или E (монеты) в Unity.</div>';
+      } else {
+        lbList.innerHTML = players.map((p, i) =>
+          '<div class="lb-row">' +
+            '<span>' + (i + 1) + '. <b>' + p.player + '</b> (хитов: ' + p.hits + ')</span>' +
+            '<span style="color:#ffd600;">' + p.coins + ' мон.' + (p.cheatAttempts > 0 ? ' <span style="color:#f43f5e;">[читов: ' + p.cheatAttempts + ']</span>' : '') + '</span>' +
+          '</div>'
+        ).join('');
+      }
+
+      // Feed
+      const feedEl = document.getElementById('event-feed');
+      if (feedEl) {
+        feedEl.innerHTML = events.map(e => '<div>' + e.replace(/</g, '&lt;') + '</div>').join('');
+      }
     }
 
-    function escapeHtml(str) {
-      return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-    }
-
-    function renderKv() {
-      const box = document.getElementById('kv-list');
-      box.innerHTML = '';
-      customKv.forEach(([k, v], idx) => {
-        const row = document.createElement('div');
-        row.className = 'kv-row';
-        row.innerHTML =
-          '<input type="text" placeholder="ключ" value="' + escapeHtml(k) + '" oninput="customKv[' + idx + '][0]=this.value" />' +
-          '<input type="text" placeholder="значение" value="' + escapeHtml(v) + '" oninput="customKv[' + idx + '][1]=this.value" />' +
-          '<button class="btn btn-sm" onclick="removeKvRow(' + idx + ')">✕</button>';
-        box.appendChild(row);
-      });
-    }
-
-    function addKvRow() {
-      customKv.push(['newKey', '100']);
-      renderKv();
-    }
-
-    function removeKvRow(idx) {
-      customKv.splice(idx, 1);
-      renderKv();
-    }
-
-    function applyPreset(status, motd, exp) {
-      document.getElementById('f-status').value = status;
-      document.getElementById('f-motd').value = motd;
-      document.getElementById('f-exp').value = exp;
-      saveConfig();
-    }
-
-    async function saveConfig() {
-      const kvObj = {};
-      customKv.forEach(([k, v]) => {
-        if (String(k).trim()) kvObj[String(k).trim()] = String(v);
-      });
-
-      const payload = {
-        status: document.getElementById('f-status').value,
-        title: document.getElementById('f-title').value,
-        motd: document.getElementById('f-motd').value,
-        expMultiplier: Number(document.getElementById('f-exp').value),
-        speedMultiplier: Number(document.getElementById('f-speed').value),
-        activePlayers: Number(document.getElementById('f-players').value),
-        themeColor: document.getElementById('f-color').value,
-        customData: kvObj,
-      };
-
+    async function applyMode(payload, btnId) {
+      document.querySelectorAll('.scene-btn').forEach(b => b.classList.remove('active'));
+      const btn = document.getElementById(btnId);
+      if (btn) btn.classList.add('active');
       const res = await fetch('/server/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const json = await res.json();
-      applyToUI({ config: json.config, stats: json.stats });
-      showToast('✅ Обновлено! Ребята могут жать R в Unity');
+      await res.json();
+      await refreshState();
+      showToast('Законы мира обновлены!');
     }
 
-    function copyUrl() {
-      const url = window.location.origin;
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(url);
-      }
-      showToast('📋 Скопировано: ' + url);
+    async function sendCustomMotd() {
+      const motd = document.getElementById('in-motd').value.trim();
+      await fetch('/server/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ motd }),
+      });
+      await refreshState();
+      showToast('Сообщение отправлено!');
     }
 
-    async function pollStats() {
+    async function resetBoss() {
+      await fetch('/game/boss/reset', { method: 'POST' });
+      await refreshState();
+      showToast('Босс возрождён (100 HP)!');
+    }
+
+    async function testBossHit() {
+      await fetch('/game/boss/hit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ player: 'Учитель', damage: 15 }),
+      });
+      await refreshState();
+      showToast('Босс получил -15 HP!');
+    }
+
+    async function resetPlayers() {
+      await fetch('/game/players/reset', { method: 'POST' });
+      await refreshState();
+      showToast('Таблица игроков сброшена.');
+    }
+
+    async function refreshState() {
       try {
         const res = await fetch('/admin/state');
-        const json = await res.json();
-        if (json.stats) {
-          document.getElementById('stat-pings').textContent = json.stats.totalRequests;
-          document.getElementById('stat-uptime').textContent = json.stats.uptimeSeconds + 's';
-        }
+        const data = await res.json();
+        renderAll(data);
       } catch (_) {}
     }
 
-    applyToUI(INITIAL);
-    renderKv();
-    setInterval(pollStats, 3000);
+    renderAll(INITIAL);
+    setInterval(refreshState, 2500);
   </script>
 </body>
 </html>`;

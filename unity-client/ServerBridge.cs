@@ -1,11 +1,12 @@
 using System;
 using System.Collections;
+using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
 
 /// <summary>
-/// Единый мост подключения Unity к бэкенду на NestJS.
-/// Работает без сторонних библиотек через нативный UnityWebRequest.
+/// Единый сетевой мост Unity <-> NestJS (совместим с github.com/newbshark/unity-backend-starter v2).
+/// Поддерживает GET и POST запросы без сторонних библиотек.
 /// </summary>
 public class ServerBridge : MonoBehaviour
 {
@@ -24,9 +25,12 @@ public class ServerBridge : MonoBehaviour
         }
     }
 
-    [Header("Настройки подключения")]
-    [Tooltip("Облачный сервер курса (или http://localhost:3000 для локального запуска)")]
+    [Header("Подключение к облаку класса")]
     public string baseUrl = "https://vox-auspex-citadel-production.up.railway.app";
+
+    [Header("Состояние (видно в Inspector)")]
+    public bool isConnected = false;
+    public string lastServerMessage = "Ожидание запроса...";
 
     private void Awake()
     {
@@ -38,8 +42,6 @@ public class ServerBridge : MonoBehaviour
         _instance = this;
         DontDestroyOnLoad(gameObject);
     }
-
-    #region DTO Структуры данных (Соответствуют DTO сервера на NestJS)
 
     [Serializable]
     public struct ServerStatusResponse
@@ -59,62 +61,169 @@ public class ServerBridge : MonoBehaviour
         public float expMultiplier;
     }
 
-    #endregion
+    [Serializable]
+    public struct WorldStateResponse
+    {
+        public string title;
+        public string motd;
+        public float expMultiplier;
+        public float cubeScale;
+        public float gravityY;
+        public string cubeColorHex;
+        public bool lowGravity;
+    }
 
-    #region Публичные методы API
+    [Serializable]
+    public struct BossStateResponse
+    {
+        public string bossName;
+        public int hp;
+        public int maxHp;
+        public int defeatedCount;
+        public string lastAttacker;
+        public string lastEvent;
+    }
 
-    /// <summary>
-    /// Запрашивает статус сервера и пинг.
-    /// </summary>
+    [Serializable]
+    public struct LootResponse
+    {
+        public string itemName;
+        public string rarity;
+        public int bonusScore;
+        public string colorHex;
+        public string message;
+    }
+
+    [Serializable]
+    public struct CoinResponse
+    {
+        public bool accepted;
+        public string player;
+        public int coins;
+        public int cheatAttempts;
+        public string message;
+    }
+
+    [Serializable]
+    public struct LeaderboardResponse
+    {
+        public string topSummary;
+    }
+
+    [Serializable]
+    private struct BossHitBody
+    {
+        public string player;
+        public int damage;
+    }
+
+    [Serializable]
+    private struct PlayerBody
+    {
+        public string player;
+    }
+
+    [Serializable]
+    private struct CoinBody
+    {
+        public string player;
+        public int amount;
+    }
+
     public void GetServerStatus(Action<ServerStatusResponse> onSuccess, Action<string> onError = null)
     {
-        StartCoroutine(SendGetRequest<ServerStatusResponse>("/server/status", onSuccess, onError));
+        StartCoroutine(SendGetRequest("/server/status", onSuccess, onError));
     }
 
-    /// <summary>
-    /// Запрашивает Сообщение Дня (MOTD).
-    /// </summary>
     public void GetMotd(Action<MotdResponse> onSuccess, Action<string> onError = null)
     {
-        StartCoroutine(SendGetRequest<MotdResponse>("/server/motd", onSuccess, onError));
+        StartCoroutine(SendGetRequest("/server/motd", onSuccess, onError));
     }
 
-    #endregion
+    public void GetWorldState(Action<WorldStateResponse> onSuccess, Action<string> onError = null)
+    {
+        StartCoroutine(SendGetRequest("/server/world", onSuccess, onError));
+    }
 
-    #region Базовые корутины Web-запросов
+    public void GetBoss(Action<BossStateResponse> onSuccess, Action<string> onError = null)
+    {
+        StartCoroutine(SendGetRequest("/game/boss", onSuccess, onError));
+    }
+
+    public void HitBoss(string player, int damage, Action<BossStateResponse> onSuccess, Action<string> onError = null)
+    {
+        string json = JsonUtility.ToJson(new BossHitBody { player = player, damage = damage });
+        StartCoroutine(SendPostRequest("/game/boss/hit", json, onSuccess, onError));
+    }
+
+    public void OpenLootChest(string player, Action<LootResponse> onSuccess, Action<string> onError = null)
+    {
+        string json = JsonUtility.ToJson(new PlayerBody { player = player });
+        StartCoroutine(SendPostRequest("/game/loot", json, onSuccess, onError));
+    }
+
+    public void CollectCoin(string player, int amount, Action<CoinResponse> onSuccess, Action<string> onError = null)
+    {
+        string json = JsonUtility.ToJson(new CoinBody { player = player, amount = amount });
+        StartCoroutine(SendPostRequest("/game/coin", json, onSuccess, onError));
+    }
+
+    public void GetLeaderboard(Action<LeaderboardResponse> onSuccess, Action<string> onError = null)
+    {
+        StartCoroutine(SendGetRequest("/game/leaderboard", onSuccess, onError));
+    }
 
     private IEnumerator SendGetRequest<T>(string endpoint, Action<T> onSuccess, Action<string> onError)
     {
         string fullUrl = baseUrl.TrimEnd('/') + endpoint;
-        using (UnityWebRequest webRequest = UnityWebRequest.Get(fullUrl))
+        using (UnityWebRequest req = UnityWebRequest.Get(fullUrl))
         {
-            webRequest.timeout = 5; // Таймаут 5 секунд
-            yield return webRequest.SendWebRequest();
-
-            if (webRequest.result == UnityWebRequest.Result.ConnectionError ||
-                webRequest.result == UnityWebRequest.Result.ProtocolError)
-            {
-                string errorMsg = $"Ошибка HTTP [{webRequest.responseCode}] при запросе к {endpoint}: {webRequest.error}";
-                Debug.LogError($"[ServerBridge] {errorMsg}");
-                onError?.Invoke(errorMsg);
-            }
-            else
-            {
-                string jsonResponse = webRequest.downloadHandler.text;
-                try
-                {
-                    T parsedData = JsonUtility.FromJson<T>(jsonResponse);
-                    onSuccess?.Invoke(parsedData);
-                }
-                catch (Exception ex)
-                {
-                    string parseError = $"Ошибка парсинга JSON ответа: {ex.Message}\nСырой JSON: {jsonResponse}";
-                    Debug.LogError($"[ServerBridge] {parseError}");
-                    onError?.Invoke(parseError);
-                }
-            }
+            req.timeout = 6;
+            yield return req.SendWebRequest();
+            HandleResponse(endpoint, req, onSuccess, onError);
         }
     }
 
-    #endregion
+    private IEnumerator SendPostRequest<T>(string endpoint, string jsonBody, Action<T> onSuccess, Action<string> onError)
+    {
+        string fullUrl = baseUrl.TrimEnd('/') + endpoint;
+        byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonBody);
+        using (UnityWebRequest req = new UnityWebRequest(fullUrl, "POST"))
+        {
+            req.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            req.downloadHandler = new DownloadHandlerBuffer();
+            req.SetRequestHeader("Content-Type", "application/json");
+            req.timeout = 6;
+            yield return req.SendWebRequest();
+            HandleResponse(endpoint, req, onSuccess, onError);
+        }
+    }
+
+    private void HandleResponse<T>(string endpoint, UnityWebRequest req, Action<T> onSuccess, Action<string> onError)
+    {
+        if (req.result == UnityWebRequest.Result.ConnectionError || req.result == UnityWebRequest.Result.ProtocolError)
+        {
+            isConnected = false;
+            string err = $"Ошибка HTTP [{req.responseCode}] ({endpoint}): {req.error}";
+            lastServerMessage = err;
+            Debug.LogError($"[ServerBridge] {err}");
+            onError?.Invoke(err);
+            return;
+        }
+
+        string json = req.downloadHandler.text;
+        try
+        {
+            T parsed = JsonUtility.FromJson<T>(json);
+            isConnected = true;
+            lastServerMessage = $"OK: {endpoint}";
+            onSuccess?.Invoke(parsed);
+        }
+        catch (Exception ex)
+        {
+            string err = $"Ошибка JSON ({endpoint}): {ex.Message}";
+            Debug.LogError($"[ServerBridge] {err} | {json}");
+            onError?.Invoke(err);
+        }
+    }
 }

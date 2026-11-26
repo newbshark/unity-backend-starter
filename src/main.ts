@@ -18,8 +18,9 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('Unity Game Backend API')
     .setDescription('Игровой сервер на NestJS для подключения клиентов Unity')
-    .setVersion('1.0')
-    .addTag('server', 'Статус сервера, пинг и системные параметры')
+    .setVersion('2.0')
+    .addTag('server', 'Статус сервера, конфиг мира и физика')
+    .addTag('game', 'Мировой босс, серверные сундуки, монеты и античит')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

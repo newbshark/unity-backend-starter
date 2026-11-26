@@ -2,55 +2,38 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Пример использования ServerBridge в реальной игре Unity.
-/// Повесьте этот скрипт на любой GameObject (например, GameManager или HUD).
+/// Модуль 3 (по желанию): Отображение текста сервера и Босса на UI -> Legacy -> Text.
 /// </summary>
 public class ServerBridgeExample : MonoBehaviour
 {
-    [Header("Ссылки на UI (необязательно)")]
+    [Header("Ссылки на Legacy UI Text (UI -> Legacy -> Text)")]
     public Text statusLabel;
     public Text motdLabel;
 
-    private void Start()
-    {
-        Debug.Log("[GameManager] Запрос данных с сервера NestJS...");
-        RequestServerData();
-    }
+    private void Start() => RequestServerData();
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.R))
-        {
-            RequestServerData();
-        }
+        if (Input.GetKeyDown(KeyCode.R)) RequestServerData();
     }
 
     public void RequestServerData()
     {
-        // 1. Проверяем статус сервера
         ServerBridge.Instance.GetServerStatus((statusData) =>
         {
-            string log = $"Сервер в сети: {statusData.status.ToUpper()} | Аптайм: {statusData.uptimeSeconds} сек | Игроков: {statusData.activePlayers}";
-            Debug.Log($"<color=#22c55e>[БЭКЕНД УСПЕХ]</color> {log}");
-
-            if (statusLabel != null)
-                statusLabel.text = $"ONLINE • {statusData.uptimeSeconds}s";
+            Debug.Log($"<color=#22c55e>[БЭКЕНД УСПЕХ]</color> {statusData.status.ToUpper()} | Игроков: {statusData.activePlayers}");
+            if (statusLabel != null) statusLabel.text = $"ONLINE • Игроков: {statusData.activePlayers} • {statusData.uptimeSeconds}s";
         },
         (error) =>
         {
-            Debug.LogError($"<color=#ef4444>[БЭКЕНД ОШИБКА]</color> Сервер не ответил: {error}");
-            if (statusLabel != null)
-                statusLabel.text = "OFFLINE (Запустите 'npm run start:dev')";
+            Debug.LogError($"<color=#ef4444>[БЭКЕНД ОШИБКА]</color> {error}");
+            if (statusLabel != null) statusLabel.text = "OFFLINE";
         });
 
-        // 2. Получаем сообщение дня (MOTD)
-        ServerBridge.Instance.GetMotd((motdData) =>
+        ServerBridge.Instance.GetWorldState((world) =>
         {
-            string log = $"{motdData.title}: {motdData.motd} (Множитель опыта: x{motdData.expMultiplier})";
-            Debug.Log($"<color=#3b82f6>[MOTD]</color> {log}");
-
-            if (motdLabel != null)
-                motdLabel.text = $"{motdData.title}\n{motdData.motd}";
+            Debug.Log($"<color=#38bdf8>[МИР]</color> {world.title}: {world.motd} (x{world.expMultiplier}, scale={world.cubeScale})");
+            if (motdLabel != null) motdLabel.text = $"{world.title}\\n{world.motd}\\nБонус: x{world.expMultiplier} | Гравитация: {world.gravityY}";
         });
     }
 }
