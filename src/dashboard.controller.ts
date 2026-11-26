@@ -13,6 +13,7 @@ export class DashboardController {
       config: this.gameState.getConfig(),
       stats: this.gameState.getStats(),
       boss: this.gameState.getBoss(),
+      quests: this.gameState.getQuestsForPlayer(),
       leaderboard: this.gameState.getLeaderboard(),
       events: this.gameState.getRecentEvents(),
     };
@@ -25,6 +26,7 @@ export class DashboardController {
       config: this.gameState.getConfig(),
       stats: this.gameState.getStats(),
       boss: this.gameState.getBoss(),
+      quests: this.gameState.getQuestsForPlayer(),
       leaderboard: this.gameState.getLeaderboard(),
       events: this.gameState.getRecentEvents(),
     });
@@ -357,16 +359,28 @@ export class DashboardController {
 
     <!-- ТЕКСТ НА ЭКРАНЫ -->
     <div class="card">
-      <div class="card-title">3. Сообщение классу (в Unity MOTD)</div>
-      <label class="lbl" for="in-motd">Текст на экранах ребят</label>
+      <div class="card-title">3. Сообщение классу (в 3D-табло над кубом)</div>
+      <label class="lbl" for="in-motd">Текст в небе Unity</label>
       <input type="text" id="in-motd" placeholder="Например: Саша, лови привет из облака!" />
       <button class="send-btn" onclick="sendCustomMotd()">Отправить в Unity всем</button>
+    </div>
+
+    <!-- ЗАДАНИЯ В UNITY -->
+    <div class="card">
+      <div class="card-title">4. Чеклист заданий в Unity (ученики тыкают прямо в игре!)</div>
+      <label class="lbl" for="in-q1">Задание 1</label>
+      <input type="text" id="in-q1" />
+      <label class="lbl" for="in-q2">Задание 2</label>
+      <input type="text" id="in-q2" />
+      <label class="lbl" for="in-q3">Задание 3</label>
+      <input type="text" id="in-q3" />
+      <button class="send-btn" style="background:var(--cyan);" onclick="sendQuests()">Обновить задания в Unity</button>
     </div>
 
     <!-- ТАБЛИЦА ЛИДЕРОВ И ЛОГ -->
     <div class="card">
       <div class="card-title">
-        <span>4. Игроки, Монеты и Античит</span>
+        <span>5. Игроки, Квесты, Монеты и Античит</span>
         <button class="mini-btn red" onclick="resetPlayers()">Сбросить</button>
       </div>
       <div id="lb-list" style="margin-bottom:10px;">
@@ -413,6 +427,14 @@ export class DashboardController {
         motdInput.value = cfg.motd || '';
       }
 
+      const quests = data.quests || {};
+      ['q1', 'q2', 'q3'].forEach(k => {
+        const inp = document.getElementById('in-' + k);
+        if (inp && document.activeElement !== inp && quests[k]) {
+          inp.value = quests[k];
+        }
+      });
+
       // Boss
       document.getElementById('boss-name').textContent = boss.bossName || 'Босс';
       const hp = Number(boss.hp ?? 100);
@@ -428,12 +450,13 @@ export class DashboardController {
       if (players.length === 0) {
         lbList.innerHTML = '<div class="hint" style="margin:0;">Пока пусто — пусть нажмут F (удар), L (сундук) или E (монеты) в Unity.</div>';
       } else {
-        lbList.innerHTML = players.map((p, i) =>
-          '<div class="lb-row">' +
-            '<span>' + (i + 1) + '. <b>' + p.player + '</b> (хитов: ' + p.hits + ')</span>' +
+        lbList.innerHTML = players.map((p, i) => {
+          const qDone = Array.isArray(p.completedQuests) ? p.completedQuests.length : 0;
+          return '<div class="lb-row">' +
+            '<span>' + (i + 1) + '. <b>' + p.player + '</b> (хиты: ' + p.hits + ' | квесты: ' + qDone + '/3)</span>' +
             '<span style="color:#ffd600;">' + p.coins + ' мон.' + (p.cheatAttempts > 0 ? ' <span style="color:#f43f5e;">[читов: ' + p.cheatAttempts + ']</span>' : '') + '</span>' +
-          '</div>'
-        ).join('');
+          '</div>';
+        }).join('');
       }
 
       // Feed
@@ -466,6 +489,19 @@ export class DashboardController {
       });
       await refreshState();
       showToast('Сообщение отправлено!');
+    }
+
+    async function sendQuests() {
+      const q1 = document.getElementById('in-q1').value.trim();
+      const q2 = document.getElementById('in-q2').value.trim();
+      const q3 = document.getElementById('in-q3').value.trim();
+      await fetch('/game/quests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q1, q2, q3 }),
+      });
+      await refreshState();
+      showToast('Задания улетели в Unity!');
     }
 
     async function resetBoss() {

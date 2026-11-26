@@ -32,12 +32,19 @@ export interface LootResult {
   message: string;
 }
 
+export interface QuestListState {
+  q1: string;
+  q2: string;
+  q3: string;
+}
+
 export interface PlayerRecord {
   player: string;
   coins: number;
   hits: number;
   chests: number;
   cheatAttempts: number;
+  completedQuests: string[];
   lastItem: string;
 }
 
@@ -83,14 +90,20 @@ export class GameStateService {
     lastEvent: 'Босс ждёт первого удара из Unity (клавиша F)!',
   };
 
+  private quests: QuestListState = {
+    q1: 'Поставить ServerCube и увидеть смену режима',
+    q2: 'Ударить Босса клавишей F и открыть сундук L',
+    q3: 'Проверить Античит кнопкой C (+999999)',
+  };
+
   private players = new Map<string, PlayerRecord>();
   private recentEvents: string[] = ['Сервер запущен и ждёт подключений класса.'];
 
   private pushEvent(text: string) {
     const time = new Date().toTimeString().slice(0, 8);
     this.recentEvents.unshift(`[${time}] ${text}`);
-    if (this.recentEvents.length > 15) {
-      this.recentEvents.length = 15;
+    if (this.recentEvents.length > 18) {
+      this.recentEvents.length = 18;
     }
   }
 
@@ -104,6 +117,7 @@ export class GameStateService {
         hits: 0,
         chests: 0,
         cheatAttempts: 0,
+        completedQuests: [],
         lastItem: '—',
       };
       this.players.set(clean, rec);
@@ -137,6 +151,11 @@ export class GameStateService {
       gravityY: this.state.gravityY,
       cubeColorHex: this.state.cubeColorHex,
       lowGravity: this.state.lowGravity,
+      bossHp: this.boss.hp,
+      bossMaxHp: this.boss.maxHp,
+      q1: this.quests.q1,
+      q2: this.quests.q2,
+      q3: this.quests.q3,
     };
   }
 
@@ -202,6 +221,54 @@ export class GameStateService {
     }
     this.pushEvent(`Режим обновлён: x${this.state.expMultiplier}, scale=${this.state.cubeScale}, gravity=${this.state.gravityY}`);
     return this.getConfig();
+  }
+
+  getQuestsForPlayer(rawPlayer?: string) {
+    const clean = (rawPlayer || '').trim();
+    const rec = clean ? this.players.get(clean) : undefined;
+    const done = rec ? rec.completedQuests : [];
+    return {
+      q1: this.quests.q1,
+      q2: this.quests.q2,
+      q3: this.quests.q3,
+      q1Done: done.includes('q1'),
+      q2Done: done.includes('q2'),
+      q3Done: done.includes('q3'),
+    };
+  }
+
+  updateQuests(patch: Partial<QuestListState>): QuestListState {
+    if (typeof patch.q1 === 'string' && patch.q1.trim()) this.quests.q1 = patch.q1.trim();
+    if (typeof patch.q2 === 'string' && patch.q2.trim()) this.quests.q2 = patch.q2.trim();
+    if (typeof patch.q3 === 'string' && patch.q3.trim()) this.quests.q3 = patch.q3.trim();
+    this.pushEvent(`Задания обновлены учителем: [1] ${this.quests.q1}`);
+    return { ...this.quests };
+  }
+
+  toggleQuestComplete(rawPlayer?: string, rawQuestId?: string) {
+    this.recordPing();
+    const rec = this.getOrCreatePlayer(rawPlayer);
+    const qid = ['q1', 'q2', 'q3'].includes(String(rawQuestId)) ? String(rawQuestId) : 'q1';
+    const idx = rec.completedQuests.indexOf(qid);
+    let completed = false;
+    if (idx === -1) {
+      rec.completedQuests.push(qid);
+      rec.coins += 20;
+      completed = true;
+      this.pushEvent(`✅ ${rec.player} отметил выполнение ${qid.toUpperCase()} (+20 мон.)!`);
+    } else {
+      rec.completedQuests.splice(idx, 1);
+      completed = false;
+      this.pushEvent(`${rec.player} снял отметку с ${qid.toUpperCase()}`);
+    }
+    return {
+      ...this.getQuestsForPlayer(rec.player),
+      player: rec.player,
+      questId: qid,
+      completed,
+      coins: rec.coins,
+      message: completed ? `Задание ${qid.toUpperCase()} сдано! (+20 монет)` : `Отметка ${qid.toUpperCase()} снята.`,
+    };
   }
 
   getBoss(): BossState {

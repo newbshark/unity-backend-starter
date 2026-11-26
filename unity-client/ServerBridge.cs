@@ -71,6 +71,11 @@ public class ServerBridge : MonoBehaviour
         public float gravityY;
         public string cubeColorHex;
         public bool lowGravity;
+        public int bossHp;
+        public int bossMaxHp;
+        public string q1;
+        public string q2;
+        public string q3;
     }
 
     [Serializable]
@@ -105,6 +110,19 @@ public class ServerBridge : MonoBehaviour
     }
 
     [Serializable]
+    public struct QuestsResponse
+    {
+        public string q1;
+        public string q2;
+        public string q3;
+        public bool q1Done;
+        public bool q2Done;
+        public bool q3Done;
+        public int coins;
+        public string message;
+    }
+
+    [Serializable]
     public struct LeaderboardResponse
     {
         public string topSummary;
@@ -128,6 +146,13 @@ public class ServerBridge : MonoBehaviour
     {
         public string player;
         public int amount;
+    }
+
+    [Serializable]
+    private struct QuestToggleBody
+    {
+        public string player;
+        public string questId;
     }
 
     public void GetServerStatus(Action<ServerStatusResponse> onSuccess, Action<string> onError = null)
@@ -166,6 +191,18 @@ public class ServerBridge : MonoBehaviour
     {
         string json = JsonUtility.ToJson(new CoinBody { player = player, amount = amount });
         StartCoroutine(SendPostRequest("/game/coin", json, onSuccess, onError));
+    }
+
+    public void GetQuests(string player, Action<QuestsResponse> onSuccess, Action<string> onError = null)
+    {
+        string q = UnityWebRequest.EscapeURL(player ?? "");
+        StartCoroutine(SendGetRequest("/game/quests?player=" + q, onSuccess, onError));
+    }
+
+    public void ToggleQuest(string player, string questId, Action<QuestsResponse> onSuccess, Action<string> onError = null)
+    {
+        string json = JsonUtility.ToJson(new QuestToggleBody { player = player, questId = questId });
+        StartCoroutine(SendPostRequest("/game/quests/toggle", json, onSuccess, onError));
     }
 
     public void GetLeaderboard(Action<LeaderboardResponse> onSuccess, Action<string> onError = null)

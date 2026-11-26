@@ -1,6 +1,6 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { GameStateService } from '../game-state.service';
+import { GameStateService, QuestListState } from '../game-state.service';
 
 @ApiTags('game')
 @Controller('game')
@@ -80,5 +80,34 @@ export class GameController {
   })
   resetPlayers() {
     return this.gameState.resetPlayers();
+  }
+
+  @Get('quests')
+  @ApiOperation({
+    summary: 'Получить текущий чеклист заданий для 3D-доски и HUD в Unity',
+  })
+  getQuests(@Query('player') player?: string) {
+    return this.gameState.getQuestsForPlayer(player);
+  }
+
+  @Post('quests')
+  @ApiOperation({
+    summary: 'Обновить текст 3 заданий прямо в воздух в Unity (с пульта учителя)',
+  })
+  updateQuests(@Body() body: Partial<QuestListState>) {
+    return this.gameState.updateQuests(body || {});
+  }
+
+  @Post('quests/toggle')
+  @ApiOperation({
+    summary: 'Отметить задание выполненным из Unity (+20 монет на сервере)',
+  })
+  @ApiBody({
+    schema: {
+      example: { player: 'Саша', questId: 'q1' },
+    },
+  })
+  toggleQuest(@Body() body: { player?: string; questId?: string }) {
+    return this.gameState.toggleQuestComplete(body?.player, body?.questId);
   }
 }

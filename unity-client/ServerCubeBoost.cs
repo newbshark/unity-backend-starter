@@ -1,9 +1,9 @@
 using UnityEngine;
 
 /// <summary>
-/// Модуль 1: «Тотем Сервера» на площади.
-/// ВАЖНО: вешай на отдельный Cube посреди площади (назови его ServerCube),
-/// чтобы вращение и невесомость не мешали WASD-управлению твоего игрока!
+/// Модуль 1: «Тотем Сервера + Табло в небе».
+/// Вешай на отдельный Cube посреди площади (ServerCube).
+/// Меняет цвет, размер, скорость, взлетает при Луне и создаёт над собой 3D-текст с заданиями от учителя!
 /// </summary>
 public class ServerCubeBoost : MonoBehaviour
 {
@@ -11,17 +11,44 @@ public class ServerCubeBoost : MonoBehaviour
     public bool autoSyncEvery3Seconds = true;
     public bool spinObject = true;
     public bool floatOnMoonGravity = true;
+    public bool show3DSkyText = true;
 
     private float currentMultiplier = 2f;
     private bool isLowGravity = false;
     private Vector3 targetScale = Vector3.one;
     private Vector3 basePosition;
     private float syncTimer = 0f;
+    private int lastBossHp = -1;
+    private float shakeTimer = 0f;
+
+    private GameObject boardObj;
+    private TextMesh skyTextMesh;
 
     private void Start()
     {
         basePosition = transform.position;
+        if (show3DSkyText)
+        {
+            CreateFloatingSkyText();
+        }
         SyncWorld();
+    }
+
+    private void CreateFloatingSkyText()
+    {
+        boardObj = new GameObject("ServerSkyBoard_3D");
+        skyTextMesh = boardObj.AddComponent<TextMesh>();
+        skyTextMesh.fontSize = 36;
+        skyTextMesh.characterSize = 0.16f;
+        skyTextMesh.anchor = TextAnchor.LowerCenter;
+        skyTextMesh.alignment = TextAlignment.Center;
+        skyTextMesh.color = Color.white;
+        skyTextMesh.text = "Подключение к облаку...";
+    }
+
+    private void OnDestroy()
+    {
+        if (boardObj != null) Destroy(boardObj);
     }
 
     private void Update()
@@ -33,13 +60,29 @@ public class ServerCubeBoost : MonoBehaviour
 
         transform.localScale = Vector3.Lerp(transform.localScale, targetScale, Time.deltaTime * 6f);
 
-        if (floatOnMoonGravity)
+        float targetY = basePosition.y;
+        if (floatOnMoonGravity && isLowGravity)
         {
-            float targetY = isLowGravity
-                ? basePosition.y + 1.25f + Mathf.Sin(Time.time * 2.5f) * 0.35f
-                : basePosition.y;
-            Vector3 nextPos = new Vector3(transform.position.x, targetY, transform.position.z);
-            transform.position = Vector3.Lerp(transform.position, nextPos, Time.deltaTime * 4f);
+            targetY = basePosition.y + 1.25f + Mathf.Sin(Time.time * 2.5f) * 0.35f;
+        }
+
+        float shakeX = 0f;
+        if (shakeTimer > 0f)
+        {
+            shakeTimer -= Time.deltaTime;
+            shakeX = Mathf.Sin(Time.time * 55f) * 0.18f;
+        }
+
+        Vector3 nextPos = new Vector3(basePosition.x + shakeX, targetY, basePosition.z);
+        transform.position = Vector3.Lerp(transform.position, nextPos, Time.deltaTime * 8f);
+
+        if (boardObj != null)
+        {
+            boardObj.transform.position = transform.position + Vector3.up * (transform.localScale.y * 0.7f + 0.9f);
+            if (Camera.main != null)
+            {
+                boardObj.transform.forward = Camera.main.transform.forward;
+            }
         }
 
         if (Input.GetKeyDown(KeyCode.R))
@@ -65,6 +108,12 @@ public class ServerCubeBoost : MonoBehaviour
             currentMultiplier = world.expMultiplier;
             isLowGravity = world.lowGravity;
 
+            if (lastBossHp != -1 && world.bossHp < lastBossHp)
+            {
+                shakeTimer = 0.4f;
+            }
+            lastBossHp = world.bossHp;
+
             float s = Mathf.Clamp(world.cubeScale, 0.3f, 4f);
             targetScale = new Vector3(s, s, s);
             Physics.gravity = new Vector3(0f, world.gravityY, 0f);
@@ -80,6 +129,15 @@ public class ServerCubeBoost : MonoBehaviour
 
             var rend2D = GetComponentInChildren<SpriteRenderer>();
             if (rend2D != null) rend2D.color = parsedColor;
+
+            if (skyTextMesh != null)
+            {
+                string modeLabel = world.lowGravity ? "ЛУНА" : "ЗЕМЛЯ";
+                skyTextMesh.text =
+                    $"[{world.title}] x{world.expMultiplier} ({modeLabel})\n" +
+                    $"{world.motd}\n" +
+                    $"БОСС: {world.bossHp}/{world.bossMaxHp} HP";
+            }
         });
     }
 }
