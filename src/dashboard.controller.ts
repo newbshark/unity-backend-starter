@@ -348,7 +348,7 @@ export class DashboardController {
       <div class="boss-bar-bg">
         <div class="boss-bar-fill" id="boss-bar"></div>
       </div>
-      <div style="font-size:12px; color:var(--dim);" id="boss-event">Ждём ударов из Unity (клавиша Space)...</div>
+      <div style="font-size:12px; color:var(--dim);" id="boss-event">Ждём ударов из Unity (клавиша F)...</div>
       <div class="row-actions">
         <button class="mini-btn volt" onclick="resetBoss()">Возродить Босса (100 HP)</button>
         <button class="mini-btn" onclick="testBossHit()">Ударить с панели (-15 HP)</button>
@@ -370,7 +370,7 @@ export class DashboardController {
         <button class="mini-btn red" onclick="resetPlayers()">Сбросить</button>
       </div>
       <div id="lb-list" style="margin-bottom:10px;">
-        <div class="hint" style="margin:0;">Пока никто не собрал монеты — пусть нажмут E или Space в Unity.</div>
+        <div class="hint" style="margin:0;">Пока никто не собрал монеты — пусть нажмут E или F в Unity.</div>
       </div>
       <label class="lbl">Живой лог сервера</label>
       <div class="feed" id="event-feed"></div>
@@ -426,7 +426,7 @@ export class DashboardController {
       const lbList = document.getElementById('lb-list');
       const players = lb.players || [];
       if (players.length === 0) {
-        lbList.innerHTML = '<div class="hint" style="margin:0;">Пока пусто — пусть нажмут Space (удар), L (сундук) или E (монеты) в Unity.</div>';
+        lbList.innerHTML = '<div class="hint" style="margin:0;">Пока пусто — пусть нажмут F (удар), L (сундук) или E (монеты) в Unity.</div>';
       } else {
         lbList.innerHTML = players.map((p, i) =>
           '<div class="lb-row">' +

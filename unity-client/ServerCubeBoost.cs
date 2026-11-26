@@ -1,24 +1,46 @@
 using UnityEngine;
 
 /// <summary>
-/// Модуль 1: Законы Мира с телефона учителя!
-/// Вешается на любой Cube / Player. Сам подтягивает скорость, размер, цвет и гравитацию с сервера.
+/// Модуль 1: «Тотем Сервера» на площади.
+/// ВАЖНО: вешай на отдельный Cube посреди площади (назови его ServerCube),
+/// чтобы вращение и невесомость не мешали WASD-управлению твоего игрока!
 /// </summary>
 public class ServerCubeBoost : MonoBehaviour
 {
     public float baseSpinSpeed = 45f;
     public bool autoSyncEvery3Seconds = true;
+    public bool spinObject = true;
+    public bool floatOnMoonGravity = true;
 
     private float currentMultiplier = 2f;
+    private bool isLowGravity = false;
     private Vector3 targetScale = Vector3.one;
+    private Vector3 basePosition;
     private float syncTimer = 0f;
 
-    private void Start() => SyncWorld();
+    private void Start()
+    {
+        basePosition = transform.position;
+        SyncWorld();
+    }
 
     private void Update()
     {
-        transform.Rotate(Vector3.up, baseSpinSpeed * currentMultiplier * Time.deltaTime);
+        if (spinObject)
+        {
+            transform.Rotate(Vector3.up, baseSpinSpeed * currentMultiplier * Time.deltaTime);
+        }
+
         transform.localScale = Vector3.Lerp(transform.localScale, targetScale, Time.deltaTime * 6f);
+
+        if (floatOnMoonGravity)
+        {
+            float targetY = isLowGravity
+                ? basePosition.y + 1.25f + Mathf.Sin(Time.time * 2.5f) * 0.35f
+                : basePosition.y;
+            Vector3 nextPos = new Vector3(transform.position.x, targetY, transform.position.z);
+            transform.position = Vector3.Lerp(transform.position, nextPos, Time.deltaTime * 4f);
+        }
 
         if (Input.GetKeyDown(KeyCode.R))
         {
@@ -41,6 +63,8 @@ public class ServerCubeBoost : MonoBehaviour
         ServerBridge.Instance.GetWorldState((world) =>
         {
             currentMultiplier = world.expMultiplier;
+            isLowGravity = world.lowGravity;
+
             float s = Mathf.Clamp(world.cubeScale, 0.3f, 4f);
             targetScale = new Vector3(s, s, s);
             Physics.gravity = new Vector3(0f, world.gravityY, 0f);

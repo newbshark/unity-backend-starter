@@ -80,7 +80,7 @@ export class GameStateService {
     maxHp: 100,
     defeatedCount: 0,
     lastAttacker: 'Никто',
-    lastEvent: 'Босс ждёт первого удара из Unity (Space)!',
+    lastEvent: 'Босс ждёт первого удара из Unity (клавиша F)!',
   };
 
   private players = new Map<string, PlayerRecord>();
@@ -312,7 +312,7 @@ export class GameStateService {
       .slice(0, 12);
     const topSummary = players.length
       ? players.slice(0, 5).map((p, idx) => `${idx + 1}. ${p.player}: ${p.coins}`).join(' | ')
-      : 'Пока пусто — жми E или Space в Unity!';
+      : 'Пока пусто — жми E или F в Unity!';
     return {
       topSummary,
       players,

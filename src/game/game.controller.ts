@@ -18,7 +18,7 @@ export class GameController {
 
   @Post('boss/hit')
   @ApiOperation({
-    summary: 'Ударить общего Мирового Босса из Unity (Space)',
+    summary: 'Ударить общего Мирового Босса из Unity (F)',
     description: 'Урон ограничивается сервером (от 1 до 25 за удар). При HP = 0 босс засчитывает победу и награду +50 монет.',
   })
   @ApiBody({
