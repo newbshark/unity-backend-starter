@@ -42,8 +42,7 @@ public class ServerBridgeExample : MonoBehaviour
             Debug.Log($"<color=#3b82f6>[MOTD]</color> {log}");
 
             if (motdLabel != null)
-                motdLabel.text = $"{motdData.title}
-{motdData.motd}";
+                motdLabel.text = $"{motdData.title}\n{motdData.motd}";
         });
     }
 }

@@ -108,8 +108,7 @@ public class ServerBridge : MonoBehaviour
                 }
                 catch (Exception ex)
                 {
-                    string parseError = $"Ошибка парсинга JSON ответа: {ex.Message}
-Сырой JSON: {jsonResponse}";
+                    string parseError = $"Ошибка парсинга JSON ответа: {ex.Message}\nСырой JSON: {jsonResponse}";
                     Debug.LogError($"[ServerBridge] {parseError}");
                     onError?.Invoke(parseError);
                 }
