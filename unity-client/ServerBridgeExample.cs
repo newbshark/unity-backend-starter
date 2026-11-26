@@ -17,6 +17,14 @@ public class ServerBridgeExample : MonoBehaviour
         RequestServerData();
     }
 
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            RequestServerData();
+        }
+    }
+
     public void RequestServerData()
     {
         // 1. Проверяем статус сервера

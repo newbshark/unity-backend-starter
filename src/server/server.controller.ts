@@ -1,10 +1,11 @@
-import { Controller, Get } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Post } from '@nestjs/common';
+import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { GameConfigState, GameStateService } from '../game-state.service';
 
 @ApiTags('server')
 @Controller('server')
 export class ServerController {
-  private readonly launchTime = Date.now();
+  constructor(private readonly gameState: GameStateService) {}
 
   @Get('status')
   @ApiOperation({
@@ -18,20 +19,21 @@ export class ServerController {
       example: {
         status: 'online',
         uptimeSeconds: 42,
-        serverTime: '2026-11-25T12:00:00.000Z',
+        serverTime: '2026-11-26T12:00:00.000Z',
         protocolVersion: '1.0.0',
         activePlayers: 1,
       },
     },
   })
   getStatus() {
-    const uptimeSeconds = Math.floor((Date.now() - this.launchTime) / 1000);
+    this.gameState.recordPing();
+    const cfg = this.gameState.getConfig();
     return {
-      status: 'online',
-      uptimeSeconds,
+      status: cfg.status,
+      uptimeSeconds: this.gameState.getUptimeSeconds(),
       serverTime: new Date().toISOString(),
       protocolVersion: '1.0.0',
-      activePlayers: 1,
+      activePlayers: cfg.activePlayers,
     };
   }
 
@@ -52,10 +54,52 @@ export class ServerController {
     },
   })
   getMotd() {
+    this.gameState.recordPing();
+    const cfg = this.gameState.getConfig();
     return {
-      title: 'STARTY Battle Arena',
-      motd: 'Добро пожаловать на сервер! Сегодня двойной опыт (x2 XP)!',
-      expMultiplier: 2.0,
+      title: cfg.title,
+      motd: cfg.motd,
+      expMultiplier: cfg.expMultiplier,
+    };
+  }
+
+  @Get('config')
+  @ApiOperation({
+    summary: 'Полный живой конфиг игры (для панели и будущих фич)',
+    description: 'Возвращает текущие значения с мобильной панели: множители, цвет, кастомные переменные и статистику.',
+  })
+  getConfig() {
+    this.gameState.recordPing();
+    return {
+      ...this.gameState.getConfig(),
+      stats: this.gameState.getStats(),
+    };
+  }
+
+  @Post('config')
+  @ApiOperation({
+    summary: 'Обновить параметры игры на лету',
+    description: 'Обновляет значения конфига (используется мобильной панелью управления и Swagger).',
+  })
+  @ApiBody({
+    schema: {
+      example: {
+        status: 'online',
+        title: 'STARTY Battle Arena',
+        motd: '⚡ Учитель включил режим x5 XP!',
+        expMultiplier: 5.0,
+        speedMultiplier: 1.5,
+        themeColor: '#C6FF00',
+        activePlayers: 5,
+      },
+    },
+  })
+  updateConfig(@Body() body: Partial<GameConfigState>) {
+    const updated = this.gameState.updateConfig(body || {});
+    return {
+      ok: true,
+      config: updated,
+      stats: this.gameState.getStats(),
     };
   }
 }

@@ -25,8 +25,8 @@ public class ServerBridge : MonoBehaviour
     }
 
     [Header("Настройки подключения")]
-    [Tooltip("Базовый адрес локального сервера NestJS")]
-    public string baseUrl = "http://localhost:3000";
+    [Tooltip("Облачный сервер курса (или http://localhost:3000 для локального запуска)")]
+    public string baseUrl = "https://vox-auspex-citadel-production.up.railway.app";
 
     private void Awake()
     {
