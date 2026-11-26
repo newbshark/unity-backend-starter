@@ -28,7 +28,7 @@ export class DashboardController {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>STARTY // ПУЛЬТ УЧИТЕЛЯ (ТЕЛЕФОН)</title>
+  <title>ПУЛЬТ УЧИТЕЛЯ (UNITY)</title>
   <style>
     :root {
       --bg: #0f1117;
@@ -337,7 +337,7 @@ export class DashboardController {
       </select>
 
       <label><span>Заголовок игры (<code>title</code>)</span></label>
-      <input type="text" id="f-title" placeholder="STARTY Battle Arena" />
+      <input type="text" id="f-title" placeholder="Cyber Arena Server" />
 
       <label><span>Сообщение дня на экране у детей (<code>motd</code>)</span></label>
       <textarea id="f-motd" rows="2"></textarea>

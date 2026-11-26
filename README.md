@@ -1,4 +1,4 @@
-# 🎮 STARTY // Unity + NestJS Backend Starter
+# 🎮 Unity + NestJS Backend Starter
 
 [![NestJS](https://img.shields.io/badge/NestJS-v10.3-E0234E?style=for-the-badge&logo=nestjs&logoColor=white)](https://nestjs.com/)
 [![Unity](https://img.shields.io/badge/Unity-2021%2B%20%7C%202022%20%7C%202023-black?style=for-the-badge&logo=unity&logoColor=white)](https://unity.com/)
@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 
 > **Стартовый шаблон серверного бэкенда на NestJS для подключения клиентских игр на Unity.**
-> Разработан для практических занятий школы разработки **STARTY Studio** под руководством ментора [@newbshark](https://github.com/newbshark).
+> Разработан для практических занятий по разработке игр под руководством ментора [@newbshark](https://github.com/newbshark).
 
 ---
 
@@ -144,4 +144,4 @@ public class MyGameController : MonoBehaviour
 ---
 
 ## 📜 Лицензия
-MIT © 2026 [newbshark](https://github.com/newbshark) & STARTY Studio.
+MIT © 2026 [newbshark](https://github.com/newbshark).

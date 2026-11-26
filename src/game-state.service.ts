@@ -19,7 +19,7 @@ export class GameStateService {
 
   private state: GameConfigState = {
     status: 'online',
-    title: 'STARTY Battle Arena',
+    title: 'Cyber Arena Server',
     motd: 'Добро пожаловать на сервер! Сегодня двойной опыт (x2 XP)!',
     expMultiplier: 2.0,
     speedMultiplier: 1.0,
@@ -27,7 +27,7 @@ export class GameStateService {
     activePlayers: 1,
     customData: {
       event: 'Lesson 01 Live',
-      bonusCode: 'STARTY',
+      bonusCode: 'ARENA',
     },
   };
 
@@ -61,7 +61,7 @@ export class GameStateService {
       this.state.status = patch.status.trim();
     }
     if (typeof patch.title === 'string') {
-      this.state.title = patch.title.trim() || 'STARTY Battle Arena';
+      this.state.title = patch.title.trim() || 'Cyber Arena Server';
     }
     if (typeof patch.motd === 'string') {
       this.state.motd = patch.motd.trim();

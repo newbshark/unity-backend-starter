@@ -1,6 +1,6 @@
 ---
 name: 🚀 Сдача домашнего задания / Фичи
-about: Шаблон для учеников школы STARTY при сдаче модуля или ДЗ
+about: Шаблон для учеников при сдаче модуля или ДЗ курса Unity + NestJS
 title: "[ДЗ] Модуль 1: Первое рукопожатие — Имя Фамилия"
 labels: "homework, needs-review"
 assignees: "newbshark"

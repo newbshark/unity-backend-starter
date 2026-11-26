@@ -16,7 +16,7 @@ async function bootstrap() {
 
   // Настройка интерактивной документации Swagger
   const config = new DocumentBuilder()
-    .setTitle('STARTY Unity Game Backend API')
+    .setTitle('Unity Game Backend API')
     .setDescription('Игровой сервер на NestJS для подключения клиентов Unity')
     .setVersion('1.0')
     .addTag('server', 'Статус сервера, пинг и системные параметры')

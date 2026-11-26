@@ -47,7 +47,7 @@ export class ServerController {
     description: 'MOTD успешно получен',
     schema: {
       example: {
-        title: 'STARTY Battle Arena',
+        title: 'Cyber Arena Server',
         motd: 'Добро пожаловать на сервер! Сегодня двойной опыт (x2 XP)!',
         expMultiplier: 2.0,
       },
@@ -85,7 +85,7 @@ export class ServerController {
     schema: {
       example: {
         status: 'online',
-        title: 'STARTY Battle Arena',
+        title: 'Cyber Arena Server',
         motd: '⚡ Учитель включил режим x5 XP!',
         expMultiplier: 5.0,
         speedMultiplier: 1.5,
