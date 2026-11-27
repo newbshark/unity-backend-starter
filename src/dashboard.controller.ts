@@ -1,11 +1,18 @@
-import { Controller, Get, Header } from '@nestjs/common';
+import { Controller, Get, Header, UseGuards } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
+import { AdminGuard } from './admin.guard';
 import { GameStateService } from './game-state.service';
 
 @ApiExcludeController()
 @Controller()
 export class DashboardController {
   constructor(private readonly gameState: GameStateService) {}
+
+  @Get('admin/verify')
+  @UseGuards(AdminGuard)
+  verifyAdmin() {
+    return { ok: true };
+  }
 
   @Get('admin/state')
   getAdminState() {
@@ -265,10 +272,13 @@ export class DashboardController {
   <div class="wrap">
     <div class="header">
       <div>
-        <div class="title">ПУЛЬТ УЧИТЕЛЯ LIVE</div>
-        <div class="sub">Одно нажатие меняет игру у всего класса</div>
+        <div class="title">CYBER ARENA LIVE</div>
+        <div class="sub" id="role-sub">Монитор класса (только просмотр)</div>
       </div>
-      <div class="pill" id="live-pill">x2 XP</div>
+      <div style="display:flex; align-items:center; gap:6px;">
+        <button class="mini-btn" id="teacher-login-btn" onclick="promptTeacherLogin()">Вход учителя</button>
+        <div class="pill" id="live-pill">x2 XP</div>
+      </div>
     </div>
 
     <div class="stats-grid">
@@ -290,8 +300,8 @@ export class DashboardController {
       </div>
     </div>
 
-    <!-- РЕЖИМЫ МИРА (GOD MODE) -->
-    <div class="card">
+    <!-- РЕЖИМЫ МИРА (ТОЛЬКО ДЛЯ УЧИТЕЛЯ) -->
+    <div class="card admin-only" style="display:none;">
       <div class="card-title">1. Режимы мира в Unity (1 клик)</div>
       <div class="hint">Нажми — и в проектах ребят (если включён Auto-Sync или по R) изменится цвет, скорость, размер и гравитация!</div>
       <div class="scene-stack">
@@ -351,14 +361,14 @@ export class DashboardController {
         <div class="boss-bar-fill" id="boss-bar"></div>
       </div>
       <div style="font-size:12px; color:var(--dim);" id="boss-event">Ждём ударов из Unity (клавиша F)...</div>
-      <div class="row-actions">
+      <div class="row-actions admin-only" style="display:none;">
         <button class="mini-btn volt" onclick="resetBoss()">Возродить Босса (100 HP)</button>
         <button class="mini-btn" onclick="testBossHit()">Ударить с панели (-15 HP)</button>
       </div>
     </div>
 
     <!-- ТЕКСТ НА ЭКРАНЫ -->
-    <div class="card">
+    <div class="card admin-only" style="display:none;">
       <div class="card-title">3. Сообщение классу (в 3D-табло над кубом)</div>
       <label class="lbl" for="in-motd">Текст в небе Unity</label>
       <input type="text" id="in-motd" placeholder="Например: Саша, лови привет из облака!" />
@@ -366,7 +376,7 @@ export class DashboardController {
     </div>
 
     <!-- ЗАДАНИЯ В UNITY -->
-    <div class="card">
+    <div class="card admin-only" style="display:none;">
       <div class="card-title">4. Чеклист заданий в Unity (ученики тыкают прямо в игре!)</div>
       <label class="lbl" for="in-q1">Задание 1</label>
       <input type="text" id="in-q1" />
@@ -380,18 +390,14 @@ export class DashboardController {
     <!-- ТАБЛИЦА ЛИДЕРОВ И ЛОГ -->
     <div class="card">
       <div class="card-title">
-        <span>5. Игроки, Квесты, Монеты и Античит</span>
-        <button class="mini-btn red" onclick="resetPlayers()">Сбросить</button>
+        <span>Игроки, Квесты, Монеты и Античит</span>
+        <button class="mini-btn red admin-only" style="display:none;" onclick="resetPlayers()">Сбросить</button>
       </div>
       <div id="lb-list" style="margin-bottom:10px;">
         <div class="hint" style="margin:0;">Пока никто не собрал монеты — пусть нажмут E или F в Unity.</div>
       </div>
       <label class="lbl">Живой лог сервера</label>
       <div class="feed" id="event-feed"></div>
-    </div>
-
-    <div style="text-align:center; font-size:12px; color:var(--dim); margin-top:8px;">
-      <a href="/api" target="_blank" style="color:var(--cyan); font-weight:700;">Swagger API (/api)</a>
     </div>
   </div>
 
@@ -466,27 +472,80 @@ export class DashboardController {
       }
     }
 
+    const ADMIN_KEY_STORAGE = 'unity_arena_admin_key';
+
+    function getAdminKey() {
+      try { return localStorage.getItem(ADMIN_KEY_STORAGE) || ''; } catch (_) { return ''; }
+    }
+
+    function setTeacherUnlocked(unlocked) {
+      document.querySelectorAll('.admin-only').forEach(el => {
+        el.style.display = unlocked ? (el.classList.contains('row-actions') ? 'flex' : 'block') : 'none';
+      });
+      const sub = document.getElementById('role-sub');
+      const btn = document.getElementById('teacher-login-btn');
+      if (sub) sub.textContent = unlocked ? 'Режим учителя: управление активно' : 'Монитор класса (только просмотр)';
+      if (btn) btn.textContent = unlocked ? 'Выйти' : 'Вход учителя';
+    }
+
+    async function verifyAndUnlock(key, silent = false) {
+      try {
+        const res = await fetch('/admin/verify', {
+          headers: key ? { 'x-admin-key': key } : {},
+        });
+        if (res.ok) {
+          if (key) { try { localStorage.setItem(ADMIN_KEY_STORAGE, key); } catch (_) {} }
+          setTeacherUnlocked(true);
+          if (!silent) showToast('Режим учителя открыт!');
+          return true;
+        }
+      } catch (_) {}
+      setTeacherUnlocked(false);
+      if (!silent) showToast('Неверный ключ учителя');
+      return false;
+    }
+
+    async function promptTeacherLogin() {
+      if (document.getElementById('teacher-login-btn')?.textContent === 'Выйти') {
+        try { localStorage.removeItem(ADMIN_KEY_STORAGE); } catch (_) {}
+        setTeacherUnlocked(false);
+        showToast('Режим учителя закрыт');
+        return;
+      }
+      const key = window.prompt('Введите ключ учителя (ADMIN_KEY):', getAdminKey());
+      if (key === null) return;
+      await verifyAndUnlock(key.trim(), false);
+    }
+
+    async function adminPost(url, bodyObj) {
+      const headers = { 'Content-Type': 'application/json' };
+      const key = getAdminKey();
+      if (key) headers['x-admin-key'] = key;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: bodyObj !== undefined ? JSON.stringify(bodyObj) : undefined,
+      });
+      if (res.status === 403) {
+        setTeacherUnlocked(false);
+        showToast('Нужен ключ учителя!');
+        throw new Error('Forbidden');
+      }
+      return res;
+    }
+
     async function applyMode(payload, btnId) {
       document.querySelectorAll('.scene-btn').forEach(b => b.classList.remove('active'));
       const btn = document.getElementById(btnId);
       if (btn) btn.classList.add('active');
-      const res = await fetch('/server/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      await res.json();
+      await adminPost('/server/config', payload);
       await refreshState();
       showToast('Законы мира обновлены!');
     }
 
     async function sendCustomMotd() {
       const motd = document.getElementById('in-motd').value.trim();
-      await fetch('/server/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ motd }),
-      });
+      await adminPost('/server/config', { motd });
       await refreshState();
       showToast('Сообщение отправлено!');
     }
@@ -495,17 +554,13 @@ export class DashboardController {
       const q1 = document.getElementById('in-q1').value.trim();
       const q2 = document.getElementById('in-q2').value.trim();
       const q3 = document.getElementById('in-q3').value.trim();
-      await fetch('/game/quests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q1, q2, q3 }),
-      });
+      await adminPost('/game/quests', { q1, q2, q3 });
       await refreshState();
       showToast('Задания улетели в Unity!');
     }
 
     async function resetBoss() {
-      await fetch('/game/boss/reset', { method: 'POST' });
+      await adminPost('/game/boss/reset');
       await refreshState();
       showToast('Босс возрождён (100 HP)!');
     }
@@ -521,7 +576,7 @@ export class DashboardController {
     }
 
     async function resetPlayers() {
-      await fetch('/game/players/reset', { method: 'POST' });
+      await adminPost('/game/players/reset');
       await refreshState();
       showToast('Таблица игроков сброшена.');
     }
@@ -535,6 +590,7 @@ export class DashboardController {
     }
 
     renderAll(INITIAL);
+    verifyAndUnlock(getAdminKey(), true);
     setInterval(refreshState, 2500);
   </script>
 </body>

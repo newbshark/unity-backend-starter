@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { AdminGuard } from '../admin.guard';
 import { GameStateService, QuestListState } from '../game-state.service';
 
 @ApiTags('game')
@@ -31,6 +32,7 @@ export class GameController {
   }
 
   @Post('boss/reset')
+  @UseGuards(AdminGuard)
   @ApiOperation({
     summary: 'Возродить Мирового Босса до 100 HP',
   })
@@ -75,6 +77,7 @@ export class GameController {
   }
 
   @Post('players/reset')
+  @UseGuards(AdminGuard)
   @ApiOperation({
     summary: 'Сбросить таблицу игроков и счётчики античита',
   })
@@ -91,6 +94,7 @@ export class GameController {
   }
 
   @Post('quests')
+  @UseGuards(AdminGuard)
   @ApiOperation({
     summary: 'Обновить текст 3 заданий прямо в воздух в Unity (с пульта учителя)',
   })

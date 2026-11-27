@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { AdminGuard } from '../admin.guard';
 import { GameConfigState, GameStateService } from '../game-state.service';
 
 @ApiTags('server')
@@ -66,6 +67,7 @@ export class ServerController {
   }
 
   @Post('config')
+  @UseGuards(AdminGuard)
   @ApiOperation({
     summary: 'Обновить законы мира на лету',
     description: 'Обновляет множители, масштаб куба, гравитацию и цвет (используется пультом учителя и Swagger).',

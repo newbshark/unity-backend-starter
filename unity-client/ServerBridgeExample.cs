@@ -33,7 +33,7 @@ public class ServerBridgeExample : MonoBehaviour
         ServerBridge.Instance.GetWorldState((world) =>
         {
             Debug.Log($"<color=#38bdf8>[МИР]</color> {world.title}: {world.motd} (x{world.expMultiplier}, scale={world.cubeScale})");
-            if (motdLabel != null) motdLabel.text = $"{world.title}\\n{world.motd}\\nБонус: x{world.expMultiplier} | Гравитация: {world.gravityY}";
+            if (motdLabel != null) motdLabel.text = $"{world.title}\n{world.motd}\nБонус: x{world.expMultiplier} | Гравитация: {world.gravityY}";
         });
     }
 }

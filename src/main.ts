@@ -10,21 +10,28 @@ async function bootstrap() {
   // КРИТИЧЕСКИ ВАЖНО ДЛЯ UNITY: Разрешаем CORS
   app.enableCors({
     origin: '*',
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type, Accept, Authorization, x-admin-key',
     credentials: true,
   });
 
-  // Настройка интерактивной документации Swagger
-  const config = new DocumentBuilder()
-    .setTitle('Unity Game Backend API')
-    .setDescription('Игровой сервер на NestJS для подключения клиентов Unity')
-    .setVersion('2.0')
-    .addTag('server', 'Статус сервера, конфиг мира и физика')
-    .addTag('game', 'Мировой босс, серверные сундуки, монеты и античит')
-    .build();
+  // Swagger включаем локально или при явном ENABLE_SWAGGER=true (в облаке по умолчанию выключен)
+  const enableSwagger =
+    process.env.ENABLE_SWAGGER === 'true' ||
+    (!process.env.RAILWAY_ENVIRONMENT && process.env.NODE_ENV !== 'production');
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  if (enableSwagger) {
+    const config = new DocumentBuilder()
+      .setTitle('Unity Game Backend API')
+      .setDescription('Игровой сервер на NestJS для подключения клиентов Unity')
+      .setVersion('2.0')
+      .addTag('server', 'Статус сервера, конфиг мира и физика')
+      .addTag('game', 'Мировой босс, серверные сундуки, монеты и античит')
+      .build();
+
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api', app, document);
+  }
 
   const port = process.env.PORT || 3000;
   await app.listen(port, '0.0.0.0');
