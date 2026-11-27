@@ -1,4 +1,7 @@
 using UnityEngine;
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+using UnityEngine.InputSystem;
+#endif
 
 /// <summary>
 /// Модуль 2: Вешается на бегающего игрока (Player).
@@ -42,21 +45,21 @@ public class WorldBossHitter : MonoBehaviour
     {
         transform.localScale = Vector3.Lerp(transform.localScale, baseScale, Time.deltaTime * 10f);
 
-        if (Input.GetKeyDown(KeyCode.Tab))
+        if (IsKeyDown(KeyCode.Tab))
         {
             bool locked = Cursor.lockState == CursorLockMode.Locked;
             Cursor.lockState = locked ? CursorLockMode.None : CursorLockMode.Locked;
             Cursor.visible = locked;
         }
 
-        if (Input.GetKeyDown(KeyCode.F)) HitBossAction();
-        if (Input.GetKeyDown(KeyCode.L)) OpenLootAction();
-        if (Input.GetKeyDown(KeyCode.E)) CollectCoinAction(10);
-        if (Input.GetKeyDown(KeyCode.C)) CollectCoinAction(999999);
+        if (IsKeyDown(KeyCode.F)) HitBossAction();
+        if (IsKeyDown(KeyCode.L)) OpenLootAction();
+        if (IsKeyDown(KeyCode.E)) CollectCoinAction(10);
+        if (IsKeyDown(KeyCode.C)) CollectCoinAction(999999);
 
-        if (Input.GetKeyDown(KeyCode.Alpha1)) ToggleQuestAction("q1");
-        if (Input.GetKeyDown(KeyCode.Alpha2)) ToggleQuestAction("q2");
-        if (Input.GetKeyDown(KeyCode.Alpha3)) ToggleQuestAction("q3");
+        if (IsKeyDown(KeyCode.Alpha1)) ToggleQuestAction("q1");
+        if (IsKeyDown(KeyCode.Alpha2)) ToggleQuestAction("q2");
+        if (IsKeyDown(KeyCode.Alpha3)) ToggleQuestAction("q3");
 
         syncTimer += Time.deltaTime;
         if (syncTimer >= 3f)
@@ -155,5 +158,27 @@ public class WorldBossHitter : MonoBehaviour
         if (GUI.Button(new Rect(26, 162, 370, 32), (q2Done ? "[✓] " : "[ ] ") + q2)) ToggleQuestAction("q2");
         if (GUI.Button(new Rect(26, 198, 370, 32), (q3Done ? "[✓] " : "[ ] ") + q3)) ToggleQuestAction("q3");
         GUI.Label(new Rect(26, 236, 370, 20), "F=Удар | L=Сундук | E=+10мон | C=Чит | Tab=Курсор");
+    }
+
+    private bool IsKeyDown(KeyCode key)
+    {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+        Keyboard kb = Keyboard.current;
+        if (kb == null) return false;
+        switch (key)
+        {
+            case KeyCode.Tab: return kb.tabKey.wasPressedThisFrame;
+            case KeyCode.F: return kb.fKey.wasPressedThisFrame;
+            case KeyCode.L: return kb.lKey.wasPressedThisFrame;
+            case KeyCode.E: return kb.eKey.wasPressedThisFrame;
+            case KeyCode.C: return kb.cKey.wasPressedThisFrame;
+            case KeyCode.Alpha1: return kb.digit1Key.wasPressedThisFrame;
+            case KeyCode.Alpha2: return kb.digit2Key.wasPressedThisFrame;
+            case KeyCode.Alpha3: return kb.digit3Key.wasPressedThisFrame;
+            default: return false;
+        }
+#else
+        return Input.GetKeyDown(key);
+#endif
     }
 }

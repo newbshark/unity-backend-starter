@@ -1,5 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+using UnityEngine.InputSystem;
+#endif
 
 /// <summary>
 /// Модуль 3 (по желанию): Отображение текста сервера и Босса на UI -> Legacy -> Text.
@@ -14,7 +17,16 @@ public class ServerBridgeExample : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.R)) RequestServerData();
+        if (IsRPressed()) RequestServerData();
+    }
+
+    private bool IsRPressed()
+    {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+        return Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame;
+#else
+        return Input.GetKeyDown(KeyCode.R);
+#endif
     }
 
     public void RequestServerData()

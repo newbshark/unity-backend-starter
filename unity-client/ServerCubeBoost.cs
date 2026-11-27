@@ -1,4 +1,7 @@
 using UnityEngine;
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+using UnityEngine.InputSystem;
+#endif
 
 /// <summary>
 /// Модуль 1: «Тотем Сервера + Табло в небе».
@@ -85,7 +88,7 @@ public class ServerCubeBoost : MonoBehaviour
             }
         }
 
-        if (Input.GetKeyDown(KeyCode.R))
+        if (IsRPressed())
         {
             SyncWorld();
         }
@@ -139,5 +142,14 @@ public class ServerCubeBoost : MonoBehaviour
                     $"БОСС: {world.bossHp}/{world.bossMaxHp} HP";
             }
         });
+    }
+
+    private bool IsRPressed()
+    {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+        return Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame;
+#else
+        return Input.GetKeyDown(KeyCode.R);
+#endif
     }
 }
