@@ -59,4 +59,8 @@ export class StorageService implements OnModuleInit {
     this.saveAtomically();
     return rec;
   }
+
+  listProfiles(): SavedProfile[] {
+    return Object.values(this.profiles);
+  }
 }

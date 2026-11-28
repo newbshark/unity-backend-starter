@@ -8,13 +8,20 @@ export class EventsGateway {
 
   @SubscribeMessage('shout')
   handleShout(@MessageBody() data: { text?: string }) {
-    const text = String(data?.text || 'Сигнал от сервера!').slice(0, 80);
+    this.broadcast(data?.text || 'Сигнал от сервера!');
+  }
+
+  broadcast(rawText?: string) {
+    const text = String(rawText || 'Сигнал от сервера!').slice(0, 120);
+    let sent = 0;
     if (this.server?.clients) {
       for (const client of this.server.clients) {
         if (client.readyState === WebSocket.OPEN) {
           client.send(text);
+          sent++;
         }
       }
     }
+    return { text, clientsNotified: sent };
   }
 }

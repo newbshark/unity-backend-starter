@@ -22,4 +22,10 @@ export class BeaconService {
     this.lastSender = clean.slice(0, 24);
     return this.getStatus();
   }
+
+  reset() {
+    this.totalPulses = 0;
+    this.lastSender = 'Никто';
+    return this.getStatus();
+  }
 }

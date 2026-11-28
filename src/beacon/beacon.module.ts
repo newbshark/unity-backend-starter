@@ -5,5 +5,6 @@ import { BeaconService } from './beacon.service';
 @Module({
   controllers: [BeaconController],
   providers: [BeaconService],
+  exports: [BeaconService],
 })
 export class BeaconModule {}

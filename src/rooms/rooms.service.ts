@@ -43,4 +43,9 @@ export class RoomsService {
   listRooms() {
     return Array.from(this.rooms.values());
   }
+
+  clearRooms() {
+    this.rooms.clear();
+    return { ok: true };
+  }
 }

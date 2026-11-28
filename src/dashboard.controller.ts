@@ -1,21 +1,26 @@
-import { Controller, Get, Header, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Header, Post, UseGuards } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
 import { AdminGuard } from './admin.guard';
 import { GameStateService } from './game-state.service';
+import { PlayerSyncService } from './players/player-sync.service';
+import { BeaconService } from './beacon/beacon.service';
+import { StorageService } from './profile/storage.service';
+import { EventsGateway } from './events/events.gateway';
+import { RoomsService } from './rooms/rooms.service';
 
 @ApiExcludeController()
 @Controller()
 export class DashboardController {
-  constructor(private readonly gameState: GameStateService) {}
+  constructor(
+    private readonly gameState: GameStateService,
+    private readonly playerSync: PlayerSyncService,
+    private readonly beacon: BeaconService,
+    private readonly storage: StorageService,
+    private readonly eventsGateway: EventsGateway,
+    private readonly rooms: RoomsService,
+  ) {}
 
-  @Get('admin/verify')
-  @UseGuards(AdminGuard)
-  verifyAdmin() {
-    return { ok: true };
-  }
-
-  @Get('admin/state')
-  getAdminState() {
+  private buildStateSnapshot() {
     return {
       config: this.gameState.getConfig(),
       stats: this.gameState.getStats(),
@@ -23,20 +28,46 @@ export class DashboardController {
       quests: this.gameState.getQuestsForPlayer(),
       leaderboard: this.gameState.getLeaderboard(),
       events: this.gameState.getRecentEvents(),
+      syncPlayers: this.playerSync.getAll().players,
+      beacon: this.beacon.getStatus(),
+      profilesCount: this.storage.listProfiles().length,
+      rooms: this.rooms.listRooms(),
     };
+  }
+
+  @Get('admin/verify')
+  @UseGuards(AdminGuard)
+  verifyAdmin() {
+    return { ok: true };
+  }
+
+  @Post('admin/shout')
+  @UseGuards(AdminGuard)
+  adminShout(@Body() body: { text?: string }) {
+    return this.eventsGateway.broadcast(body?.text);
+  }
+
+  @Post('admin/beacon/reset')
+  @UseGuards(AdminGuard)
+  resetBeacon() {
+    return this.beacon.reset();
+  }
+
+  @Post('admin/rooms/reset')
+  @UseGuards(AdminGuard)
+  resetRooms() {
+    return this.rooms.clearRooms();
+  }
+
+  @Get('admin/state')
+  getAdminState() {
+    return this.buildStateSnapshot();
   }
 
   @Get()
   @Header('Content-Type', 'text/html; charset=utf-8')
   renderMobilePanel(): string {
-    const initial = JSON.stringify({
-      config: this.gameState.getConfig(),
-      stats: this.gameState.getStats(),
-      boss: this.gameState.getBoss(),
-      quests: this.gameState.getQuestsForPlayer(),
-      leaderboard: this.gameState.getLeaderboard(),
-      events: this.gameState.getRecentEvents(),
-    });
+    const initial = JSON.stringify(this.buildStateSnapshot());
 
     return `<!DOCTYPE html>
 <html lang="ru">
@@ -399,6 +430,60 @@ export class DashboardController {
       <label class="lbl">Живой лог сервера</label>
       <div class="feed" id="event-feed"></div>
     </div>
+
+    <!-- WEBSOCKET PUSH (УРОК 07, ТОЛЬКО УЧИТЕЛЬ) -->
+    <div class="card admin-only" style="display:none;">
+      <div class="card-title">5. Мгновенный WebSocket-сигнал классу (Урок 07)</div>
+      <label class="lbl" for="in-ws-shout">Push в LiveSocketClient (прилетит за миллисекунды)</label>
+      <input type="text" id="in-ws-shout" placeholder="Например: ВНИМАНИЕ! Бонус раунд через 5 секунд!" />
+      <button class="send-btn" style="background:var(--orange); color:#fff;" onclick="sendWsShout()">⚡ Пушнуть всем по WebSocket</button>
+    </div>
+
+    <!-- МУЛЬТИПЛЕЕР: ПРИЗРАКИ, МАЯК, ПРОФИЛИ, КОМНАТЫ (УРОКИ 02-08) -->
+    <div class="card">
+      <div class="card-title">
+        <span>6. Призраки, Маяк и Комнаты (Уроки 02–08)</span>
+      </div>
+      <div class="stats-grid" style="margin-bottom:10px;">
+        <div class="stat-box">
+          <div class="stat-val" id="st-ghosts" style="color:var(--cyan);">0</div>
+          <div class="stat-lbl">Призраков</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="st-beacon" style="color:var(--volt);">0</div>
+          <div class="stat-lbl">Маяк</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="st-profiles" style="color:var(--green);">0</div>
+          <div class="stat-lbl">Профилей</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="st-rooms">0</div>
+          <div class="stat-lbl">Комнат</div>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <label class="lbl" style="margin:0;">Командный маяк (Урок 03)</label>
+        <button class="mini-btn red admin-only" style="display:none; padding:3px 7px; font-size:10px;" onclick="resetBeacon()">Сбросить маяк</button>
+      </div>
+      <div class="lb-row" id="beacon-box" style="margin-bottom:10px;">
+        <span id="beacon-text">Маяк активен! Сигналов: 0</span>
+      </div>
+
+      <label class="lbl">Живые призраки на арене (Урок 02)</label>
+      <div id="sync-list" style="margin-bottom:10px;">
+        <div class="hint" style="margin:0;">Призраков пока нет (нужен OnlinePlayersRadar.cs).</div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <label class="lbl" style="margin:0;">Игровые комнаты и лобби (Урок 08)</label>
+        <button class="mini-btn red admin-only" style="display:none; padding:3px 7px; font-size:10px;" onclick="resetRooms()">Очистить комнаты</button>
+      </div>
+      <div id="rooms-list">
+        <div class="hint" style="margin:0;">Активных комнат пока нет (#ALPHA, #MOON).</div>
+      </div>
+    </div>
   </div>
 
   <div class="toast" id="toast">Готово!</div>
@@ -469,6 +554,40 @@ export class DashboardController {
       const feedEl = document.getElementById('event-feed');
       if (feedEl) {
         feedEl.innerHTML = events.map(e => '<div>' + e.replace(/</g, '&lt;') + '</div>').join('');
+      }
+
+      // Lessons 02-08 live metrics
+      const esc = (s) => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      const syncPlayers = data.syncPlayers || [];
+      const beacon = data.beacon || {};
+      const rooms = data.rooms || [];
+
+      document.getElementById('st-ghosts').textContent = syncPlayers.length;
+      document.getElementById('st-beacon').textContent = beacon.totalPulses ?? 0;
+      document.getElementById('st-profiles').textContent = data.profilesCount ?? 0;
+      document.getElementById('st-rooms').textContent = rooms.length;
+      document.getElementById('beacon-text').textContent = (beacon.statusText || 'Маяк активен') + ' (имп: ' + (beacon.totalPulses ?? 0) + ')';
+
+      const syncEl = document.getElementById('sync-list');
+      if (syncEl) {
+        if (syncPlayers.length === 0) {
+          syncEl.innerHTML = '<div class="hint" style="margin:0;">Призраков пока нет (нужен OnlinePlayersRadar.cs).</div>';
+        } else {
+          syncEl.innerHTML = syncPlayers.map(sp =>
+            '<div class="lb-row"><span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:' + esc(sp.colorHex || '#38BDF8') + ';"></span><b>' + esc(sp.player) + '</b></span><span>(' + Number(sp.x || 0).toFixed(1) + ', ' + Number(sp.y || 0).toFixed(1) + ', ' + Number(sp.z || 0).toFixed(1) + ')</span></div>'
+          ).join('');
+        }
+      }
+
+      const roomsEl = document.getElementById('rooms-list');
+      if (roomsEl) {
+        if (rooms.length === 0) {
+          roomsEl.innerHTML = '<div class="hint" style="margin:0;">Активных комнат пока нет (#ALPHA, #MOON).</div>';
+        } else {
+          roomsEl.innerHTML = rooms.map(rm =>
+            '<div class="lb-row"><span><b>#' + esc(rm.roomCode) + '</b> (' + esc((rm.players || []).join(', ') || 'пусто') + ')</span><span style="color:#ffd600;">Босс: ' + Number(rm.bossHp ?? 100) + ' HP</span></div>'
+          ).join('');
+        }
       }
     }
 
@@ -579,6 +698,28 @@ export class DashboardController {
       await adminPost('/game/players/reset');
       await refreshState();
       showToast('Таблица игроков сброшена.');
+    }
+
+    async function sendWsShout() {
+      const inp = document.getElementById('in-ws-shout');
+      const text = inp ? inp.value.trim() : '';
+      if (!text) return showToast('Введите текст сигнала');
+      const res = await adminPost('/admin/shout', { text });
+      const data = await res.json();
+      if (inp) inp.value = '';
+      showToast('Push отправлен (' + (data.clientsNotified ?? 0) + ' кл.)');
+    }
+
+    async function resetBeacon() {
+      await adminPost('/admin/beacon/reset');
+      await refreshState();
+      showToast('Маяк сброшен');
+    }
+
+    async function resetRooms() {
+      await adminPost('/admin/rooms/reset');
+      await refreshState();
+      showToast('Комнаты очищены');
     }
 
     async function refreshState() {
